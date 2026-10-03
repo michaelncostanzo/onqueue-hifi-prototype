@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OnQueue — Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&family=Fraunces:opsz,wght@9..144,500;600;700&display=swap">
+<style>
+  :root{
+    --bg:#efe9dd; --ink:#191c24; --mut:#565c69; --faint:#6c675b; --line:#e3ddd0;
+    --emb:#6d5cb3; --emb-d:#4c3f88; --emb-t:#efedf9; --logobg:#e7ddc9; --qpurple:#7d6fa6;
+    --sh-sm:0 1px 2px rgba(20,23,33,.07);
+    --sh:0 14px 34px -18px rgba(40,30,15,.5);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;color:var(--ink);
+    background:radial-gradient(1100px 560px at 70% -10%,#f6f1e7 0,#efe9dd 58%,#e7dfce 100%);
+    font-family:"IBM Plex Sans",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;min-height:100%}
+  .wrap{width:100%;max-width:720px;text-align:center}
+  .eyebrow{font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--emb)}
+  .brand{display:inline-flex;align-items:center;gap:12px;margin-top:12px}
+  .brand .mark{width:46px;height:46px;border-radius:12px;background:var(--logobg);overflow:hidden;display:flex;
+    box-shadow:var(--sh-sm),inset 0 0 0 1px rgba(120,90,40,.06)}
+  .brand .mark svg{width:46px;height:46px;display:block}
+  .brand h1{font-family:"Fraunces",Georgia,serif;font-weight:600;font-size:44px;letter-spacing:-.02em;margin:0;line-height:1;display:inline-flex;align-items:baseline}
+  .brand .qsvg{height:.82em;width:auto;transform:translateY(.1em);margin:0 -.01em}
+  .tagline{color:var(--mut);font-size:15px;margin:16px 0 40px}
+
+  .cards{display:flex;gap:24px;justify-content:center;flex-wrap:wrap}
+  .card{appearance:none;text-decoration:none;color:inherit;background:#fff;border:1px solid var(--line);border-radius:20px;
+    width:260px;padding:34px 24px 26px;display:flex;flex-direction:column;align-items:center;gap:20px;
+    box-shadow:var(--sh);transition:transform .14s ease,box-shadow .14s ease,border-color .14s ease;cursor:pointer}
+  .card:hover{transform:translateY(-4px);box-shadow:0 22px 46px -20px rgba(40,30,15,.55);border-color:#d8d0ee}
+  .art{height:132px;display:flex;align-items:center;justify-content:center}
+  .art svg{display:block}
+  .label{font-family:"Fraunces",Georgia,serif;font-weight:600;font-size:19px;letter-spacing:-.01em;color:var(--ink)}
+  .foot{margin-top:40px;font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.06em;color:var(--faint)}
+  @media(max-width:560px){.card{width:100%;max-width:320px}.brand h1{font-size:36px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">High-fidelity interactive prototype</div>
+  <div class="brand">
+    <span class="mark" id="mark"></span>
+    <h1 id="wm"></h1>
+  </div>
+  <p class="tagline">A production-scheduling tool for a print &amp; embroidery shop. Choose a version to explore.</p>
+
+  <div class="cards">
+    <a class="card" href="HiFi_Desktop.html">
+      <div class="art">
+        <svg width="150" height="118" viewBox="0 0 150 118" fill="none">
+          <rect x="6" y="6" width="138" height="90" rx="10" fill="#fdfcf9" stroke="#20242e" stroke-width="3"/>
+          <rect x="6" y="6" width="138" height="22" rx="10" fill="#20242e"/>
+          <circle cx="18" cy="17" r="2.6" fill="#8a8f9a"/><circle cx="28" cy="17" r="2.6" fill="#8a8f9a"/><circle cx="38" cy="17" r="2.6" fill="#8a8f9a"/>
+          <rect x="18" y="38" width="30" height="48" rx="4" fill="#efedf9"/><rect x="18" y="38" width="4" height="48" rx="2" fill="#6d5cb3"/>
+          <rect x="54" y="38" width="30" height="30" rx="4" fill="#e9f1fb"/><rect x="54" y="38" width="4" height="30" rx="2" fill="#3d6fb4"/>
+          <rect x="90" y="38" width="30" height="40" rx="4" fill="#fbf1e2"/><rect x="90" y="38" width="4" height="40" rx="2" fill="#c07a2e"/>
+          <rect x="126" y="38" width="6" height="48" rx="3" fill="#eef1f7"/>
+          <rect x="54" y="102" width="42" height="6" rx="3" fill="#cfc8ba"/>
+          <rect x="62" y="96" width="26" height="8" rx="2" fill="#20242e"/>
+        </svg>
+      </div>
+      <div class="label">Open desktop prototype</div>
+    </a>
+
+    <a class="card" href="HiFi_Phone.html">
+      <div class="art">
+        <svg width="78" height="132" viewBox="0 0 78 132" fill="none">
+          <rect x="6" y="4" width="66" height="124" rx="16" fill="#fdfcf9" stroke="#20242e" stroke-width="3"/>
+          <rect x="30" y="11" width="18" height="4" rx="2" fill="#cfc8ba"/>
+          <rect x="14" y="24" width="32" height="7" rx="3.5" fill="#20242e"/>
+          <rect x="14" y="40" width="50" height="22" rx="5" fill="#efedf9"/><rect x="14" y="40" width="4" height="22" rx="2" fill="#6d5cb3"/>
+          <circle cx="58" cy="46" r="4" fill="#1f9d6b"/>
+          <rect x="14" y="68" width="50" height="18" rx="5" fill="#e9f1fb"/><rect x="14" y="68" width="4" height="18" rx="2" fill="#3d6fb4"/>
+          <rect x="14" y="92" width="50" height="18" rx="5" fill="#fbf1e2"/><rect x="14" y="92" width="4" height="18" rx="2" fill="#c07a2e"/>
+          <rect x="28" y="120" width="22" height="4" rx="2" fill="#cfc8ba"/>
+        </svg>
+      </div>
+      <div class="label">Open phone prototype</div>
+    </a>
+  </div>
+
+  <div class="foot">OnQueue · DesignLab capstone</div>
+</div>
+
+<script>
+const QPATH="M545.00 1008.94 C511.88 1006.36 488.26 1000.40 464.50 988.61 C421.03 967.03 392.77 936.06 342.09 854.43 C335.16 843.28 328.32 832.16 326.87 829.73 L324.24 825.31 L313.37 824.63 C289.68 823.13 255.96 816.51 230.85 808.42 C128.74 775.51 57.44 699.47 31.20 595.50 C23.36 564.42 20.79 541.79 20.80 504.00 C20.85 405.40 42.04 318.96 85.52 239.88 C105.49 203.57 128.33 173.32 157.90 144.00 C180.58 121.52 207.68 100.07 232.50 84.96 C252.83 72.59 287.54 56.33 312.76 47.39 C397.64 17.28 507.47 12.09 585.01 34.53 C667.54 58.41 728.15 104.56 767.72 173.65 C798.85 228.00 812.08 289.09 808.94 363.93 C802.18 524.90 737.06 660.39 626.36 743.79 C596.91 765.98 557.04 787.10 521.82 799.18 L510.15 803.19 L519.72 817.84 C524.99 825.90 531.32 835.65 533.79 839.50 C541.76 851.94 554.53 869.20 565.24 882.00 C584.13 904.58 602.08 919.74 621.50 929.51 C642.11 939.89 653.45 941.27 688.00 937.61 C700.92 936.24 711.77 935.43 712.10 935.81 C712.43 936.19 714.16 945.50 715.94 956.50 C717.71 967.50 719.39 977.46 719.66 978.63 C720.10 980.51 719.15 981.12 711.33 983.95 C687.08 992.74 635.00 1003.66 599.50 1007.40 C581.38 1009.32 558.25 1009.97 545.00 1008.94 Z M395.47 763.03 C491.42 743.91 569.52 643.76 611.52 486.00 C631.29 411.71 638.09 326.45 629.46 261.00 C616.98 166.41 572.44 103.79 505.71 87.03 C461.25 75.86 413.58 83.77 372.74 109.10 C345.58 125.95 316.58 154.74 294.58 186.71 C249.85 251.69 213.04 357.29 201.58 453.50 C197.92 484.25 197.51 492.15 197.55 530.00 C197.60 569.35 198.23 578.70 202.59 605.00 C207.76 636.12 218.90 668.44 232.36 691.30 C256.42 732.19 289.46 756.13 332.66 764.00 C347.75 766.74 379.27 766.26 395.47 763.03 Z";
+document.getElementById('mark').innerHTML='<svg viewBox="-278 -178 1386 1386" xmlns="http://www.w3.org/2000/svg"><path d="'+QPATH+'" fill="#7d6fa6" fill-rule="evenodd"/></svg>';
+document.getElementById('wm').innerHTML='On<svg class="qsvg" viewBox="20 20 790 990" xmlns="http://www.w3.org/2000/svg"><path d="'+QPATH+'" fill="#7d6fa6" fill-rule="evenodd"/></svg>ueue';
+</script>
+</body>
+</html>

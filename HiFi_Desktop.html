@@ -1,0 +1,1668 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Living Schedule — Hi-fi Desktop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Fraunces:opsz,wght@9..144,500;600;700&display=swap">
+<style>
+  :root{
+    --bg:#e7e7e4; --panel:#ffffff; --ink:#2b2b2b; --mut:#5f5f5f; --faint:#6f6f6f;
+    --line:#d3d3d1; --line2:#e0e0dd; --cell:#fafaf9; --block:#ececeb; --blockLine:#c9c9c7;
+    --dark:#3a3a3a; --sel:#e4e4e1;
+    --ok:#ededeb; --oki:#8f8f8c; --risk:#cfcfcc; --late:#3a3a3a;
+    --field:#f6f6f4; --place:#6f6f6f;
+    /* muted decoration-method colors — used on the schedule-panel bars now,
+       and planned for filling the whole card (Google-Calendar style) at hi-fi */
+    --emb:#8f7fb5; --scr:#6486b5; --dtf:#b9752f;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"IBM Plex Sans",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.4}
+  .tag{position:fixed;top:12px;left:16px;font-family:"IBM Plex Mono",monospace;font-size:10.5px;
+    letter-spacing:.12em;text-transform:uppercase;color:#5a5a5a;z-index:5}
+
+  .app{width:1320px;margin:30px auto;background:var(--panel);border:1px solid var(--line);
+    border-radius:14px;overflow:hidden;box-shadow:0 20px 50px -24px rgba(0,0,0,.35)}
+
+  .top{display:flex;align-items:center;gap:20px;padding:14px 20px;border-bottom:1px solid var(--line2)}
+  .logo{display:flex;align-items:center;gap:9px;font-weight:700;font-size:15px}
+  .logo .mark{width:24px;height:24px;border:1.5px solid var(--ink);border-radius:6px;
+    display:flex;align-items:center;justify-content:center;font-size:12px}
+  .tabs{display:flex;gap:4px;margin-left:8px}
+  .tab{padding:7px 13px;border-radius:7px;font-size:13.5px;color:var(--mut)}
+  .tab.on{background:var(--sel);color:var(--ink);font-weight:600}
+  .grow{flex:1}
+  .wknav{display:flex;align-items:center;gap:2px;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .wknav .a{padding:8px 10px;color:var(--mut);font-size:14px}
+  .wknav .lbl{padding:8px 12px;font-size:13px;font-weight:600;border-left:1px solid var(--line);border-right:1px solid var(--line)}
+  .search{width:150px;height:36px;border:1px solid var(--line);border-radius:8px;background:var(--cell);
+    display:flex;align-items:center;padding:0 11px;font-size:13px;color:var(--faint)}
+  .addbtn{background:var(--dark);color:#fff;border:none;border-radius:8px;padding:10px 16px;font-size:13.5px;font-weight:600}
+
+  .main{display:grid;grid-template-columns:1fr 340px;align-items:start}
+  .boardwrap{padding:18px;border-right:1px solid var(--line2)}
+  .boardhead{display:flex;align-items:center;gap:14px;margin-bottom:16px;flex-wrap:wrap}
+  .boardhead h2{font-size:1.05rem;font-weight:700;margin:0;margin-right:4px}
+  .filters{display:flex;gap:8px;margin-left:auto}
+  .mtog{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:100px;
+    padding:7px 14px;font-size:12.5px;color:var(--mut);background:#fff;cursor:pointer;user-select:none}
+  .mtog.on{background:var(--sel);color:var(--ink);font-weight:600;border-color:#c4c4c1}
+  .mtog .dot{width:9px;height:9px;border-radius:50%;border:1.5px solid #b5b5b2}
+  .mtog.on .dot{background:#5f5f5c;border-color:#5f5f5c}
+  /* method chips carry their decoration-method color */
+  .mtog[data-t="emb"] .dot{border-color:var(--emb)} .mtog[data-t="scr"] .dot{border-color:var(--scr)} .mtog[data-t="dtf"] .dot{border-color:var(--dtf)}
+  .mtog[data-t="emb"].on .dot{background:var(--emb);border-color:var(--emb)}
+  .mtog[data-t="scr"].on .dot{background:var(--scr);border-color:var(--scr)}
+  .mtog[data-t="dtf"].on .dot{background:var(--dtf);border-color:var(--dtf)}
+  /* keep all status glyphs centered in their circles */
+  .sdot,.dchk{line-height:0}
+  .sdot svg,.dchk svg{display:block;margin:auto}
+
+  .dayview{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-left:8px}
+  .dv{padding:6px 12px;font-size:12px;color:var(--mut);cursor:pointer;user-select:none;background:#fff}
+  .dv+.dv{border-left:1px solid var(--line)}
+  .dv.on{background:var(--sel);color:var(--ink);font-weight:600}
+  .changebar{display:flex;align-items:center;justify-content:space-between;gap:12px;
+    margin-bottom:14px;padding:9px 10px 9px 14px;border:1px solid #d9d2c0;background:#f4efe2;border-radius:10px}
+  .changebar[hidden]{display:none}
+  .cbmsg{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:500;color:#6a6350}
+  .cbdot{width:8px;height:8px;border-radius:50%;background:#c99a2e}
+  .cbacts{display:flex;gap:8px}
+  .cbacts button{border-radius:7px;padding:7px 13px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit}
+  .cbrevert{background:#fff;border:1px solid var(--line);color:var(--ink)}
+  .cbsave{background:var(--dark);color:#fff;border:none}
+  .laneswrap{display:flex;align-items:center;gap:8px;justify-content:flex-end;margin:-4px 0 16px}
+  .laneswrap.hidden{display:none}
+  .llbl{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
+  .ltog{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:100px;
+    padding:5px 12px;font-family:"IBM Plex Mono",monospace;font-size:11.5px;font-weight:600;color:var(--mut);
+    background:#fff;cursor:pointer;user-select:none}
+  .ltog.on{background:var(--sel);color:var(--ink);border-color:#c4c4c1}
+  .ltog .ld{width:7px;height:7px;border-radius:50%;background:#b5b5b2;opacity:.45}
+  .ltog.on .ld{opacity:1}
+  .laneswrap.m-emb .ld{background:var(--emb)}
+  .laneswrap.m-scr .ld{background:var(--scr)}
+  .laneswrap.m-dtf .ld{background:var(--dtf)}
+
+  .section{margin-bottom:22px}
+  .section.hidden{display:none}
+  .sechead{display:flex;align-items:baseline;gap:10px;margin-bottom:9px}
+  .sechead .nm{font-size:15px;font-weight:700}
+  .sechead .ct{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--faint);letter-spacing:.03em}
+
+  .grid{display:grid;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+  .empty{grid-column:1/-1;padding:34px;text-align:center;color:var(--faint);font-size:13px}
+  .corner{grid-row:1;grid-column:1;border-bottom:1px solid var(--line);border-right:1px solid var(--line);background:var(--cell)}
+  .dayhead{grid-row:1;border-bottom:1px solid var(--line);border-right:1px solid var(--line);
+    padding:0 8px;background:var(--cell);display:flex;align-items:center;justify-content:center}
+  .dayhead .d{font-size:12px;font-weight:600}
+  .lanehead{grid-row:2;border-bottom:1px solid var(--line);border-right:1px solid var(--line2);
+    background:var(--cell);display:flex;align-items:center;justify-content:center}
+  .lanehead.mb{border-right:1px solid var(--line)}
+  .lanehead.db{border-right:1px solid var(--line)}
+  .lanehead .ll{font-family:"IBM Plex Mono",monospace;font-size:9px;font-weight:600;
+    letter-spacing:.05em;color:var(--mut);text-transform:uppercase}
+  .cell.mb{border-right:1px solid var(--line)}
+  .cell.off{background-image:repeating-linear-gradient(45deg,rgba(90,88,80,.05) 0 5px,transparent 5px 10px)}
+  .cell.shiftline{border-top:1px solid #bdbcb5}
+  .block.otblock{border-style:dashed}
+  .block{cursor:grab;touch-action:none}
+  body.dragsel{-webkit-user-select:none;-moz-user-select:none;user-select:none;cursor:grabbing}
+  body.dragsel *{cursor:grabbing !important}
+  .grid.dragging{cursor:grabbing}
+  .grid.dragging .block{pointer-events:none}
+  .block.placeholder{background:#e7e5dd;border:2px dashed #b9b7ac;box-shadow:none;
+    display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .phlabel{font-family:"IBM Plex Mono",monospace;font-size:9.5px;font-weight:600;letter-spacing:.04em;
+    text-transform:uppercase;color:#97958b;text-align:center;padding:4px}
+  .block.ghost{position:fixed;z-index:60;pointer-events:none;opacity:.95;
+    transform:translate(-26px,-16px) rotate(3deg);overflow:hidden;
+    box-shadow:0 14px 30px -10px rgba(0,0,0,.5);cursor:grabbing}
+  .otbadge{align-self:end;justify-self:stretch;margin:2px 3px;z-index:2;pointer-events:none;
+    font-family:"IBM Plex Mono",monospace;font-size:8px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+    color:#5b5a55;background:#e5e3db;border:1px solid #cfcdc5;border-radius:4px;padding:2px 0;text-align:center}
+  .otf{font-family:"IBM Plex Mono",monospace;font-size:8px;font-weight:700;letter-spacing:.04em;
+    color:#5b5a55;background:#e5e3db;border-radius:3px;padding:0 3px}
+  .timecol{grid-column:1;grid-row:2 / span 8;border-right:1px solid var(--line);background:var(--cell);
+    display:flex;flex-direction:column;justify-content:space-between;align-items:flex-end;padding:0 7px 0 0}
+  .timelbl{font-family:"IBM Plex Mono",monospace;font-size:9.5px;color:var(--faint);line-height:1}
+  .timelbl:first-child{transform:translateY(-4px)}
+  .timelbl:last-child{transform:translateY(4px)}
+  .cell{border-right:1px solid var(--line2);border-bottom:1px solid var(--line2)}
+  .cell.db{border-right:1px solid var(--line)}
+  .block{margin:2px;border:1px solid var(--blockLine);background:#fff;border-radius:6px;
+    overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+  .btab{background:#dcdcda;border-bottom:1px solid #cfcfcd;padding:2px 5px;
+    display:flex;align-items:center;gap:3px;
+    font-family:"IBM Plex Mono",monospace;font-size:8px;font-weight:600;letter-spacing:.05em;
+    color:#5c5c5a;text-transform:uppercase}
+  .btab .dd{flex:1;text-align:center;line-height:1.05}
+  .btab .lk{flex:none;display:inline-flex;align-items:center;cursor:pointer;color:#a6a6a3;
+    padding:1px;margin:-1px;border-radius:3px}
+  .btab .lk svg{width:8px;height:10px;display:block}
+  .btab .lk:hover{color:#3a3a3a;background:rgba(0,0,0,.06)}
+  .btab.hard{background:#cfcfcc;color:#3a3a3a}
+  .btab.hard .lk{color:#3a3a3a}
+  .btab .sdot{width:11px;height:11px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center}
+  .btab .sdot svg{width:7px;height:7px;display:block}
+  .sdot.grn{background:#4a8f5f} .sdot.yel{background:#d1a02e} .sdot.red{background:#c15b53}
+  .bbody{padding:5px 6px}
+  .bbody .m{font-size:9px;font-weight:600;color:var(--mut);line-height:1.1}
+  .bbody .c{font-size:10.5px;font-weight:600;line-height:1.12;margin-top:1px}
+  .bbody .ct{font-size:9px;color:var(--mut);margin-top:1px}
+  .block.done{opacity:.6;filter:grayscale(1);cursor:default;box-shadow:none}
+  .block.done .btab{background:#d6d6d2;color:#5c5c5a}
+  .block.done .btab.hard{background:#cfcfcc}
+  .block.done .bbody .c{color:#54544e}
+  .dchk{flex:none;display:inline-flex;align-items:center;color:#5f7a63}
+  .dchk svg{width:9px;height:9px;display:block}
+
+  /* ======================================================================
+     HI-FI VISUAL LAYER  (overrides the lo-fi styles above; DOM unchanged)
+     ====================================================================== */
+  :root{
+    --bg:#efe9dd; --panel:#ffffff; --ink:#191c24; --mut:#565c69; --faint:#6c675b;
+    --line:#e9e5db; --line2:#f2efe8; --cell:#fdfcf9; --block:#f2f3f7; --blockLine:#e3ddd0;
+    --dark:#20242e; --sel:#eef1f7; --field:#f3f5f9; --place:#646a79;
+    --emb:#6d5cb3; --emb-t:#efedf9; --emb-d:#4c3f88;
+    --scr:#3d6fb4; --scr-t:#e9f1fb; --scr-d:#2b5490;
+    --dtf:#c07a2e; --dtf-t:#fbf1e2; --dtf-d:#8c5716;
+    --grn:#1f9d6b; --grn-t:#e6f5ee; --grn-d:#116b48;
+    --yel:#c98a1e; --yel-t:#faf0d8; --yel-d:#875c11;
+    --red:#d5433f; --red-t:#fbe7e6; --red-d:#a02b28;
+    --sh-sm:0 1px 2px rgba(20,23,33,.07);
+    --sh:0 6px 18px -8px rgba(20,23,33,.20);
+    --sh-lg:0 32px 70px -28px rgba(18,21,32,.42);
+    --r:14px;
+  }
+  body{background:radial-gradient(1200px 600px at 70% -10%,#f6f1e7 0,#efe9dd 60%,#e9e2d3 100%);}
+  .tag{color:#726c5d;font-size:10px;letter-spacing:.16em}
+  .app{width:1320px;border:1px solid #e6ded0;border-radius:20px;box-shadow:var(--sh-lg)}
+
+  /* top bar */
+  .top{padding:15px 22px;gap:22px;background:linear-gradient(#ffffff,#fcfdfe);border-bottom:1px solid var(--line)}
+  .logo{gap:10px;font-family:"Fraunces",Georgia,serif;font-weight:600;font-size:19px;letter-spacing:-.01em;color:var(--ink)}
+  .logo .qn{color:#7d6fa6}
+  .logo{align-items:baseline}
+  .logo .qsvg{height:.92em;width:auto;align-self:baseline;transform:translateY(.16em);margin:0 -.03em}
+  .logo .mark{width:34px;height:34px;border:none;border-radius:9px;overflow:hidden;color:#7d6fa6;
+    background:#e7ddc9;box-shadow:var(--sh-sm),inset 0 0 0 1px rgba(120,90,40,.06);
+    display:flex;align-items:center;justify-content:center}
+  .logo .mark svg{width:100%;height:100%;display:block}
+  .tabs{gap:3px;margin-left:10px;background:var(--field);padding:3px;border-radius:10px;border:1px solid var(--line)}
+  .tab{padding:6px 15px;border-radius:8px;font-size:13px;font-weight:500;transition:.15s}
+  .tab.on{background:#fff;color:var(--ink);font-weight:600;box-shadow:var(--sh-sm)}
+  .wknav{border:1px solid var(--line);border-radius:10px;background:#fff;box-shadow:var(--sh-sm)}
+  .wknav .a{padding:8px 12px;font-size:15px;color:var(--mut)}
+  .wknav .a:hover{color:var(--ink);background:var(--field)}
+  .wknav .lbl{font-size:12.5px;border-color:var(--line)}
+  .search{width:210px;height:40px;border:1px solid var(--line);border-radius:10px;background:var(--field);
+    color:var(--place);font-size:13px;padding:0 12px 0 34px;position:relative;box-shadow:var(--sh-sm)}
+  .search::before{content:"";position:absolute;left:12px;top:50%;width:14px;height:14px;transform:translateY(-50%);
+    background:no-repeat center/contain url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238b91a0' stroke-width='2.2' stroke-linecap='round'><circle cx='11' cy='11' r='7'/><line x1='21' y1='21' x2='16.5' y2='16.5'/></svg>")}
+  .addbtn{background:linear-gradient(#2c313d,#191d26);border-radius:10px;padding:0 18px;height:40px;font-size:13.5px;
+    box-shadow:0 4px 12px -3px rgba(20,23,33,.5),inset 0 1px 0 rgba(255,255,255,.12);transition:.15s;letter-spacing:.01em}
+  .addbtn:hover{transform:translateY(-1px);box-shadow:0 8px 18px -5px rgba(20,23,33,.55)}
+
+  /* board frame */
+  .main{grid-template-columns:1fr 360px}
+  .boardwrap{padding:22px 24px}
+  .boardhead{margin-bottom:18px}
+  .boardhead h2{font-family:"Fraunces",Georgia,serif;font-size:1.35rem;font-weight:600;letter-spacing:-.01em}
+  .dayview{border:1px solid var(--line);border-radius:9px;background:var(--field);padding:3px;gap:0;box-shadow:var(--sh-sm)}
+  .dv{padding:6px 13px;border-radius:7px;font-size:12px;font-weight:500;background:transparent}
+  .dv+.dv{border-left:none}
+  .dv.on{background:#fff;color:var(--ink);font-weight:600;box-shadow:var(--sh-sm)}
+  .mtog{border:1px solid var(--line);border-radius:100px;padding:8px 15px;font-size:12.5px;background:#fff;box-shadow:var(--sh-sm);transition:.15s}
+  .mtog:hover{border-color:#cfd4de}
+  .mtog.on{background:var(--sel);border-color:#c9cfdb;color:var(--ink)}
+  .mtog .dot{width:10px;height:10px;border-width:2px}
+  .mtog[data-t="emb"].on{background:var(--emb-t);border-color:#d8d0ee} .mtog[data-t="emb"].on .dot{background:var(--emb);border-color:var(--emb)}
+  .mtog[data-t="scr"].on{background:var(--scr-t);border-color:#cadff5} .mtog[data-t="scr"].on .dot{background:var(--scr);border-color:var(--scr)}
+  .mtog[data-t="dtf"].on{background:var(--dtf-t);border-color:#eed6b6} .mtog[data-t="dtf"].on .dot{background:var(--dtf);border-color:var(--dtf)}
+  .ltog{border-radius:100px;border:1px solid var(--line);background:#fff;box-shadow:var(--sh-sm);font-size:11px;padding:5px 13px}
+  .ltog.on{background:var(--sel);border-color:#c9cfdb}
+  .llbl{color:var(--faint);letter-spacing:.08em}
+
+  .changebar{border:1px solid #ecdcb4;background:linear-gradient(#fbf4e2,#f9efd6);border-radius:12px;padding:11px 12px 11px 16px;box-shadow:var(--sh-sm)}
+  .cbmsg{color:#7a5f1c;font-weight:600}
+  .cbdot{background:var(--yel);box-shadow:0 0 0 4px rgba(201,138,30,.16)}
+  .cbacts button{border-radius:9px;padding:8px 15px}
+  .cbsave{background:linear-gradient(#2c313d,#191d26);box-shadow:var(--sh-sm)}
+  .cbrevert{border-color:#e3d6b3;background:#fff}
+
+  /* schedule grid */
+  .grid{border:1px solid var(--line);border-radius:14px;box-shadow:var(--sh);background:#fff}
+  .corner,.dayhead,.lanehead{background:var(--cell);border-color:var(--line2)}
+  .dayhead{border-bottom:1px solid var(--line);border-right:1px solid var(--line2)}
+  .dayhead .d{font-size:12.5px;font-weight:600;color:var(--ink)}
+  .lanehead .ll{color:var(--faint);letter-spacing:.08em}
+  .timecol{background:var(--cell);border-right:1px solid var(--line)}
+  .timelbl{color:var(--faint);font-size:10px}
+  .cell{border-right:1px solid var(--line2);border-bottom:1px solid var(--line2)}
+  .cell.db,.dayhead,.lanehead.db{border-right:1px solid var(--line)}
+  .cell.off{background-image:repeating-linear-gradient(45deg,rgba(120,124,140,.045) 0 6px,transparent 6px 12px)}
+  .cell.shiftline{border-top:1px solid #d4d8e1}
+
+  /* ---- job cards (calendar-style, method-tinted) ---- */
+  .block{margin:2px 3px;border:1px solid var(--blockLine);border-left:4px solid #c9c9c7;border-radius:9px;
+    background:#fff;box-shadow:var(--sh-sm);overflow:hidden;transition:transform .12s,box-shadow .12s}
+  .block:hover{transform:translateY(-1px);box-shadow:0 8px 18px -8px rgba(20,23,33,.30)}
+  .block[data-meth="emb"]{background:var(--emb-t);border-color:#e0dbf1;border-left-color:var(--emb)}
+  .block[data-meth="scr"]{background:var(--scr-t);border-color:#d3e2f4;border-left-color:var(--scr)}
+  .block[data-meth="dtf"]{background:var(--dtf-t);border-color:#eeddc4;border-left-color:var(--dtf)}
+  /* white header strip so cards separate cleanly and the due date reads first;
+     lock + status pinned to the corners so the due date owns the full width and stays on one line */
+  .btab{position:relative;display:block;background:var(--panel);border:none;border-bottom:1px solid var(--line);
+    padding:5px 15px;font-size:8px;letter-spacing:0}
+  .btab .dd{display:block;width:100%;text-align:center;color:var(--mut);font-weight:600;
+    font-family:"IBM Plex Mono",ui-monospace,monospace;text-transform:uppercase;letter-spacing:.02em;white-space:nowrap}
+  .btab .ddl{display:block;font-size:7px;line-height:1.1;letter-spacing:.06em}
+  .btab .ddd{display:block;font-size:8px;line-height:1.15;font-weight:700}
+  /* one machine selected → columns are ~2x wider, so show a larger single-line due date */
+  #grid.one-lane .btab{padding:6px 22px}
+  #grid.one-lane .btab .dd{display:flex;align-items:baseline;justify-content:center;gap:5px}
+  #grid.one-lane .btab .ddl{display:inline;font-size:13px;line-height:1;font-weight:700;letter-spacing:.01em}
+  #grid.one-lane .btab .ddd{display:inline;font-size:13px;line-height:1;font-weight:700;letter-spacing:.01em}
+  #grid.one-lane .btab .lk{left:6px}
+  #grid.one-lane .btab .sdot{right:6px}
+  .btab .lk{position:absolute;left:3px;top:50%;transform:translateY(-50%);color:var(--faint);opacity:.9}
+  .btab.hard{background:var(--panel)}
+  .block[data-meth="emb"] .btab{border-bottom-color:#ddd6f0}
+  .block[data-meth="scr"] .btab{border-bottom-color:#cfe0f3}
+  .block[data-meth="dtf"] .btab{border-bottom-color:#ecdabf}
+  .block[data-meth="emb"] .btab .dd{color:var(--emb-d)}
+  .block[data-meth="scr"] .btab .dd{color:var(--scr-d)}
+  .block[data-meth="dtf"] .btab .dd{color:var(--dtf-d)}
+  .btab .sdot{position:absolute;right:3px;top:50%;transform:translateY(-50%);
+    width:12px;height:12px;display:grid;place-items:center;box-shadow:0 0 0 1.5px var(--panel)}
+  .btab .sdot svg{width:7.5px;height:7.5px;display:block}
+  .sdot.grn{background:var(--grn)} .sdot.yel{background:var(--yel)} .sdot.red{background:var(--red)}
+  .bbody{padding:2px 8px 8px}
+  .bbody .m{display:none}   /* board is single-method — the tint + left bar already convey it */
+  .bbody .c{font-size:11px;font-weight:600;color:var(--ink);margin-top:1px;line-height:1.18;letter-spacing:-.01em;overflow-wrap:break-word}
+  .bbody .ct{font-size:9.5px;color:var(--mut);margin-top:3px}
+  .otf{color:#7a5a11;background:#f6ecd2;font-weight:700}
+  .block.continued{background:repeating-linear-gradient(135deg,rgba(255,255,255,.5) 0 7px,rgba(255,255,255,.15) 7px 14px)}
+  .block .cont{padding:6px 8px;display:flex;flex-direction:column;gap:1px}
+  .cont .cn{font-size:11px;font-weight:600;color:var(--ink)}
+  .cont .cc{font-family:"IBM Plex Mono",monospace;font-size:8px;letter-spacing:.05em;text-transform:uppercase;color:var(--mut)}
+  .block.done{filter:grayscale(.85);opacity:.62}
+  .block.otblock{border-style:solid;border-left-style:solid}
+  .block.otblock .btab .dd::after{content:" · OT";font-weight:700}
+  .block.placeholder{background:#eef0f6;border:2px dashed #c3c8d4}
+  .phlabel{color:#9aa0ad}
+  .otbadge{color:#7a5a11;background:#f6ecd2;border:1px solid #ecdcb4;border-radius:6px;font-size:8px}
+  .block.ghost{box-shadow:0 20px 40px -12px rgba(20,23,33,.6)}
+
+  /* right rail */
+  .rail{background:linear-gradient(#fdfbf7,#faf7f0);border-left:1px solid var(--line)}
+  .railtop h2{font-family:"Fraunces",Georgia,serif;font-weight:600;letter-spacing:-.01em}
+  .ord{border:1px solid var(--line);border-radius:12px;background:#fff;box-shadow:var(--sh-sm);padding:12px 14px;gap:12px;transition:.12s}
+  .ord:hover{transform:translateY(-1px);box-shadow:var(--sh);border-color:#dbe0ea}
+  .ord .barcol{width:4px;border-radius:4px}
+  .ord.m-emb .barcol{background:var(--emb)} .ord.m-scr .barcol{background:var(--scr)} .ord.m-dtf .barcol{background:var(--dtf)}
+  .ord .mid .c{font-size:14px;font-weight:600;color:var(--ink)}
+  .ord .mid .meta{font-size:11.5px;color:var(--mut)}
+  .ord .right .due{font-size:12px;color:var(--mut)}
+  .st{font-size:10px;font-weight:600;padding:3px 9px;border-radius:100px;border:1px solid transparent}
+  .st.grn{background:var(--grn-t);color:var(--grn-d);border-color:#bfe3d1}
+  .st.yel{background:var(--yel-t);color:var(--yel-d);border-color:#ecd7a3}
+  .st.red{background:var(--red-t);color:var(--red-d);border-color:#f0c3c1}
+
+  /* drawer + modal polish (inherit palette) */
+  .drawer{box-shadow:var(--sh-lg)}
+  .modal{border-radius:18px;box-shadow:var(--sh-lg)}
+  .mhead h1,.dh h2,.ajover h1{font-family:"Fraunces",Georgia,serif;font-weight:600;letter-spacing:-.01em}
+  .btn.primary,.btn-p,.cbsave,.addp{border-radius:10px}
+  /* --- hover-zoom legend popover --- */
+  .zoomtip{position:fixed;z-index:9999;pointer-events:none;background:var(--panel);
+    border:1px solid var(--line);border-radius:13px;box-shadow:var(--sh-lg);
+    padding:13px 16px 12px;min-width:132px;max-width:230px;text-align:center;
+    animation:ztin .12s ease-out}
+  @keyframes ztin{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+  .zoomtip .zt-due{display:flex;flex-direction:column;gap:1px;line-height:1}
+  .zoomtip .zt-k{font-family:"IBM Plex Mono",monospace;font-size:10px;font-weight:600;
+    letter-spacing:.14em;color:var(--faint)}
+  .zoomtip .zt-v{font-family:"IBM Plex Mono",monospace;font-size:23px;font-weight:700;
+    letter-spacing:.01em;color:var(--ink);text-transform:uppercase}
+  .zoomtip .zt-ico{display:flex;justify-content:center;margin-bottom:6px}
+  .zoomtip .zt-ico svg{width:26px;height:31px}
+  .zoomtip .zt-ico.hard{color:var(--ink)} .zoomtip .zt-ico.soft{color:var(--faint)}
+  .zoomtip .zt-dot{width:38px;height:38px;border-radius:50%;margin:0 auto 7px;
+    display:grid;place-items:center}
+  .zoomtip .zt-dot svg{width:22px;height:22px;stroke:#fff}
+  .zoomtip .zt-dot.grn{background:var(--grn)} .zoomtip .zt-dot.yel{background:var(--yel)} .zoomtip .zt-dot.red{background:var(--red)}
+  .zoomtip .zt-lab{font-size:14px;font-weight:700;color:var(--ink);letter-spacing:-.01em}
+  .zoomtip .zt-cap{font-size:11px;color:var(--mut);margin-top:4px;line-height:1.3}
+  .zoomtip.zt-due .zt-cap{margin-top:6px}
+  @media (prefers-reduced-motion: reduce){ .zoomtip{animation:none} }
+
+  /* --- Accessibility support (audit corrections) --- */
+  .sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+  :focus-visible{outline:2px solid #2b2b2b;outline-offset:2px;border-radius:4px}
+  .block:focus-visible{outline-offset:-2px}
+  .lk:focus-visible,.dchk:focus-visible{outline-offset:1px}
+  /* enlarge the tiny lock control's hit area toward the 24px target without changing the icon */
+  .btab .lk{padding:4px}
+  @media (prefers-reduced-motion: reduce){ *{animation-duration:.001ms!important;transition-duration:.001ms!important} }
+  .cont{padding:6px 7px;height:100%;display:flex;flex-direction:column;justify-content:center;gap:3px}
+  .cont .cn{font-size:10px;font-weight:600;color:var(--mut);line-height:1.1}
+  .cont .cc{font-family:"IBM Plex Mono",monospace;font-size:8px;font-weight:600;letter-spacing:.05em;
+    text-transform:uppercase;color:var(--faint)}
+
+  .rail{display:flex;flex-direction:column;overflow:hidden}
+  .railhead{flex:none;padding:18px 16px 10px;border-bottom:1px solid var(--line2)}
+  .raillist{flex:1;min-height:0;overflow-y:auto;padding:0 16px 14px}
+  .railtop{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .rail h2{font-size:.78rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin:0}
+  .rail .subh{font-size:12px;color:var(--faint);margin:6px 0 0}
+  .selwrap{font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:.04em;text-transform:uppercase;
+    color:var(--faint);display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+  .selwrap select{font-family:"IBM Plex Sans",sans-serif;font-size:11.5px;font-weight:600;text-transform:none;
+    letter-spacing:0;color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:4px 22px 4px 8px;
+    background:#fff;cursor:pointer;appearance:none;-webkit-appearance:none;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M2 3.5 L5 6.5 L8 3.5' stroke='%237d7d7d' stroke-width='1.3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat:no-repeat;background-position:right 7px center}
+  .ord{display:flex;gap:11px;padding:11px 4px;border-bottom:1px solid var(--line2)}
+  .ord .barcol{width:4px;border-radius:3px;flex:none;background:var(--oki)}
+  .ord.m-emb .barcol{background:var(--emb)}
+  .ord.m-scr .barcol{background:var(--scr)}
+  .ord.m-dtf .barcol{background:var(--dtf)}
+  .ord .mid{flex:1;min-width:0}
+  .ord .c{font-size:13px;font-weight:600}
+  .ord .meta{font-size:11.5px;color:var(--mut);margin-top:2px}
+  .ord .right{text-align:right;flex:none}
+  .ord .due{font-size:11.5px;color:var(--ink);white-space:nowrap}
+  .st{display:inline-block;margin-top:5px;font-size:10px;font-weight:600;letter-spacing:.03em;
+    padding:3px 8px;border-radius:100px;border:1px solid var(--line);white-space:nowrap}
+  .st.red{background:#f4dedd;color:#8f322b;border-color:#b23f38}
+  .st.yel{background:#f6eccf;color:#7f6212;border-color:#c99a2e}
+  .st.grn{background:#dfeee4;color:#2f6a42;border-color:#4a8f5f}
+
+  /* notifications feed */
+  .note{display:flex;gap:11px;padding:12px 4px;border-bottom:1px solid var(--line2)}
+  .note .ndot{width:9px;height:9px;border-radius:50%;flex:none;margin-top:4px}
+  .note.s-red .ndot{background:#c15b53} .note.s-yel .ndot{background:#d1a02e} .note.s-grn .ndot{background:#4a8f5f}
+  .note .nmid{flex:1;min-width:0}
+  .note .nhead{display:flex;align-items:baseline;gap:8px}
+  .note .nc{font-size:13px;font-weight:600}
+  .note .nwhen{font-size:10.5px;color:var(--faint);margin-left:auto;white-space:nowrap;font-family:"IBM Plex Mono",monospace}
+  .note .nkind{font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;
+    color:var(--mut);margin-top:3px;display:flex;align-items:center;gap:5px}
+  .note .nkind .lkm{width:9px;height:11px;display:inline-flex;color:#5c5c5a}
+  .note .nkind .lkm svg{width:9px;height:11px;display:block}
+  .note .ntxt{font-size:12px;color:#54544f;margin-top:4px;line-height:1.35}
+
+  /* job-detail drawer */
+  .block{cursor:pointer}
+  .scrim{position:fixed;inset:0;background:rgba(24,24,22,.34);z-index:40;opacity:0;pointer-events:none;transition:opacity .18s}
+  .scrim.on{opacity:1;pointer-events:auto}
+  .drawer{position:fixed;top:0;right:0;height:100vh;width:462px;max-width:94vw;background:#fff;z-index:41;
+    box-shadow:-20px 0 60px -28px rgba(0,0,0,.45);transform:translateX(100%);transition:transform .22s ease;
+    display:flex;flex-direction:column;border-left:1px solid var(--line)}
+  .drawer.on{transform:none}
+  .dh{padding:18px 22px 15px;border-bottom:1px solid var(--line2)}
+  .dh-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px}
+  .methtag{display:inline-flex;align-items:center;gap:7px;font-family:"IBM Plex Mono",monospace;font-size:10.5px;
+    font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--mut);border:1px solid var(--line);border-radius:100px;padding:4px 11px}
+  .methtag .md{width:8px;height:8px;border-radius:50%}
+  .methtag.emb .md{background:var(--emb)} .methtag.scr .md{background:var(--scr)} .methtag.dtf .md{background:var(--dtf)}
+  .dx{border:1px solid var(--line);background:#fff;border-radius:8px;width:30px;height:30px;font-size:16px;color:var(--mut);cursor:pointer;line-height:1}
+  .dh h2{font-size:1.3rem;font-weight:700;margin:0 0 3px;letter-spacing:-.01em}
+  .dh .dsub{font-size:12.5px;color:var(--mut)}
+  .dh-badges{display:flex;gap:8px;align-items:center;margin-top:13px;flex-wrap:wrap}
+  .lockrow{display:inline-flex;align-items:center;gap:6px;font-family:"IBM Plex Mono",monospace;font-size:11px;
+    font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:#3a3a3a;background:#eceae4;border-radius:100px;padding:5px 11px}
+  .lockrow svg{width:9px;height:11px;display:block}
+  .dh-badges .st{margin-top:0}
+  .dbody{flex:1;overflow-y:auto;padding:2px 22px 18px}
+  .sec{padding:15px 0;border-bottom:1px solid var(--line2)}
+  .sec:last-child{border-bottom:none}
+  .sec h3{font-family:"IBM Plex Mono",monospace;font-size:10px;font-weight:600;letter-spacing:.09em;
+    text-transform:uppercase;color:var(--faint);margin:0 0 10px}
+  .drow{display:grid;grid-template-columns:130px 1fr;gap:10px;padding:4px 0;font-size:13px;line-height:1.3}
+  .drow .k{color:var(--mut)}
+  .drow .v{color:var(--ink);font-weight:500}
+  .drow .v .otf{margin-left:5px}
+  .estrow{display:flex;justify-content:space-between;font-size:13px;padding:5px 0;color:var(--ink)}
+  .estrow .lbl{color:var(--mut)}
+  .estrow.total{border-top:1px solid var(--line);margin-top:5px;padding-top:9px;font-weight:700}
+  .estrow.total .lbl{color:var(--ink);font-weight:700}
+  .estmeta{display:flex;gap:16px;margin-top:9px;font-size:11.5px;color:var(--mut)}
+  .estmeta b{color:var(--ink);font-weight:600}
+  .estnote{font-size:11.5px;color:var(--faint);font-style:italic;margin-top:7px}
+  .drow input,.drow select{width:100%;font-family:inherit;font-size:13px;color:var(--ink);
+    border:1px solid var(--line);border-radius:7px;padding:6px 8px;background:#fff}
+  .drow input.num{width:88px}
+  .drow input:focus,.drow select:focus{outline:none;border-color:#a9a9a5}
+  .notesin{width:100%;min-height:92px;font-family:inherit;font-size:13px;color:var(--ink);line-height:1.45;
+    border:1px solid var(--line);border-radius:8px;padding:9px 11px;resize:vertical;background:#fff}
+  .notesin:focus{outline:none;border-color:#a9a9a5}
+  .lockhint{font-size:11.5px;color:var(--faint);margin:0 0 8px;line-height:1.4}
+  .dropzone{display:flex;align-items:center;justify-content:center;text-align:center;
+    margin-top:12px;padding:14px 12px;border:1.5px dashed #c2bcae;border-radius:9px;
+    background:var(--cell);cursor:pointer;font-size:12.5px;color:var(--mut)}
+  .dropzone .dz-t{display:flex;flex-direction:column;gap:3px}
+  .dropzone .dz-s{font-size:11px;color:var(--faint)}
+  .dropzone u{color:var(--ink);text-underline-offset:2px}
+  .dropzone.over{border-color:#8f8f8b;background:#eceae3}
+  .dropzone.staged{border-style:solid;border-color:#4a8f5f;background:#eef4ef;color:#2f6a42}
+  .dropzone.staged .dz-s{color:#4a8f5f}
+  .dnote{font-size:13px;color:#4c4c48;line-height:1.45;background:var(--cell);border:1px solid var(--line2);border-radius:8px;padding:11px 12px}
+  .dfoot{padding:14px 22px;border-top:1px solid var(--line);display:flex;gap:10px}
+  .dfoot.col{flex-direction:column}
+  .dfoot button{flex:1;border-radius:8px;padding:11px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+  .btn-p{background:var(--dark);color:#fff;border:none}
+  .btn-s{background:#fff;border:1px solid var(--line);color:var(--ink)}
+  .btn-done{background:#fff;border:1px solid var(--line);color:var(--ink);display:flex;align-items:center;justify-content:center;gap:7px}
+  .btn-done svg{width:14px;height:14px}
+  .donebadge{display:flex;align-items:center;justify-content:center;gap:8px;background:#eef3ee;border:1px solid #cbdccb;color:#3f6b4a;border-radius:8px;padding:11px 14px;font-size:12.5px;font-weight:600}
+  .donebadge svg{width:15px;height:15px;flex:none}
+
+  /* Add-a-job modal (desktop) */
+  .ajover{position:fixed;inset:0;z-index:50;background:rgba(24,24,22,.4);display:flex;
+    align-items:flex-start;justify-content:center;padding:38px 20px 48px;overflow:auto}
+  .ajover[hidden]{display:none}
+  .ajover .modal{position:relative;width:1000px;max-width:100%;background:#fff;border:1px solid var(--line);
+    border-radius:12px;box-shadow:0 24px 60px -20px rgba(0,0,0,.4)}
+  .ajover .mhead{display:flex;align-items:center;justify-content:space-between;padding:20px 26px;border-bottom:1px solid var(--line2)}
+  .ajover .mhead h1{font-size:1.35rem;font-weight:700;margin:0}
+  .ajover .crumb{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-top:3px}
+  .ajover .x{width:32px;height:32px;border:1px solid var(--line);border-radius:7px;display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:20px;line-height:1;font-family:Arial,sans-serif;background:var(--field);cursor:pointer}
+  .ajover .body{display:grid;grid-template-columns:1fr 320px}
+  .ajover .form{padding:22px 26px;border-right:1px solid var(--line2)}
+  .ajover .side{padding:22px}
+  .ajover .sec{margin-bottom:24px}
+  .ajover .sec>h2{font-size:.72rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--mut);margin:0 0 12px;padding-bottom:7px;border-bottom:1px solid var(--line2)}
+  .ajover .row{display:flex;gap:14px;margin-bottom:13px}
+  .ajover .row:last-child{margin-bottom:0}
+  .ajover .fld{flex:1;display:flex;flex-direction:column;gap:5px}
+  .ajover .fld.s{flex:0 0 116px}
+  .ajover label{font-size:11.5px;font-weight:600;color:var(--mut);letter-spacing:.02em}
+  .ajover label .req{color:#b06}
+  .ajover .in{height:38px;border:1px solid var(--line);border-radius:7px;background:var(--field);display:flex;align-items:center;padding:0 11px;font-size:13.5px;color:var(--place)}
+  .ajover .in.filled{color:var(--ink)}
+  .ajover .in.sel{justify-content:space-between;cursor:pointer}
+  .ajover .in .chev{color:var(--faint);font-size:11px}
+  .ajover .hint{font-size:11px;color:var(--faint);font-style:italic;margin-top:1px}
+  .ajover .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .ajover .seg .opt{flex:1;text-align:center;padding:8px 15px;font-size:13px;color:var(--mut);border-right:1px solid var(--line);background:#fff;cursor:pointer}
+  .ajover .seg .opt:last-child{border-right:none}
+  .ajover .seg .opt.on{background:var(--sel);color:var(--ink);font-weight:600}
+  .ajover .tog{display:flex;width:100%;height:38px;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+  .ajover .tog .t{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;
+    padding:0 8px;font-size:12.5px;color:var(--mut);background:#fff;border-right:1px solid var(--line);cursor:pointer}
+  .ajover .tog .t:last-child{border-right:none}
+  .ajover .tog .t.on{background:var(--sel);color:var(--ink);font-weight:600}
+  .ajover .loc{border:1px solid var(--line);border-radius:9px;padding:12px 13px;margin-bottom:10px;background:#fbfbfa}
+  .ajover .loc .lh{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .ajover .loc .lh span{font-size:11.5px;font-weight:700;letter-spacing:.04em;color:var(--mut)}
+  .ajover .loc .lh .del{font-size:11px;color:var(--faint);cursor:pointer}
+  .ajover .addloc{border:1px dashed var(--line);border-radius:8px;padding:10px;text-align:center;font-size:12.5px;color:var(--mut);background:#fbfbfa;cursor:pointer}
+  .ajover .autohint{display:flex;align-items:center;gap:8px;background:#f3f3f0;border:1px solid var(--line2);border-radius:8px;padding:9px 12px;font-size:12px;color:var(--mut);margin-top:4px}
+  .ajover .autohint .b{font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;background:#e2e2df;border:1px solid var(--line);border-radius:4px;padding:2px 6px;color:var(--faint)}
+  .ajover .notes{border:1px solid var(--line);border-radius:10px;background:#fff;padding:14px 16px;margin-bottom:16px}
+  .ajover .notes h3{font-size:.72rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--mut);margin:0 0 8px}
+  .ajover .notesbox{width:100%;min-height:150px;border:none;background:transparent;padding:0;font-size:13.5px;color:var(--ink);resize:vertical;font-family:inherit;line-height:1.5;outline:none}
+  .ajover .notesbox::placeholder{color:var(--place)}
+  .ajover .estcard{border:1px solid var(--line);border-radius:10px;background:var(--field);padding:16px}
+  .ajover .estcard h3{font-size:.72rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--mut);margin:0 0 12px}
+  .ajover .big{font-size:1.9rem;font-weight:700;margin:0;line-height:1}
+  .ajover .biglab{font-size:12px;color:var(--mut);margin:2px 0 16px}
+  .ajover .brk{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
+  .ajover .bt{display:flex;justify-content:space-between;font-size:12.5px}
+  .ajover .bt .v{color:var(--mut);font-variant-numeric:tabular-nums}
+  .ajover .estnote{font-size:11.5px;color:var(--faint);font-style:italic;border-top:1px solid var(--line2);padding-top:12px;line-height:1.45}
+  .ajover .fit{display:flex;justify-content:space-between;font-size:12.5px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line2)}
+  .ajover .fit b{font-weight:600}
+  .ajover input.in,.ajover select.in{box-sizing:border-box;display:block;width:100%;height:38px;font-family:inherit;font-size:13.5px;outline:none}
+  .ajover input.in::placeholder{color:var(--place)}
+  .ajover input.in:focus,.ajover select.in:focus{border-color:var(--mut)}
+  .ajover select.in{-webkit-appearance:none;appearance:none;cursor:pointer;padding-right:28px;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+    background-repeat:no-repeat;background-position:right 11px center}
+  .ajover .chev.up{display:flex;align-items:center;color:var(--faint)}
+  .ajover .tog.disabled{opacity:.4;pointer-events:none}
+  .ajover .addtime{display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding-top:12px;border-top:1px solid var(--line2)}
+  .ajover .addtime .atlabel{font-size:12.5px}
+  .ajover .stepper{display:flex;align-items:center;gap:5px}
+  .ajover .stbtn{width:26px;height:26px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--mut);font-size:16px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+  .ajover .stbtn:hover{background:var(--field)}
+  .ajover .atin{width:46px;height:26px;box-sizing:border-box;border:1px solid var(--line);border-radius:6px;text-align:center;font-size:12.5px;font-family:inherit;color:var(--ink);outline:none}
+  .ajover .atunit{font-size:12px;color:var(--mut)}
+  .ajover .foot{display:flex;align-items:center;gap:10px;padding:16px 26px;border-top:1px solid var(--line2)}
+  .ajover .foot .spacer{flex:1 1 auto}
+  .ajover .btn{flex:none;white-space:nowrap;padding:10px 18px;border-radius:8px;font-size:13.5px;font-weight:600;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer}
+  .ajover .btn.ghost{color:var(--mut)}
+  .ajover .btn.primary{background:var(--dark);color:#fff;border-color:var(--dark)}
+</style>
+</head>
+<body>
+
+<div class="tag" aria-hidden="true">OnQueue · Living Schedule</div>
+
+<div class="app">
+  <div class="top" role="banner">
+    <h1 class="sr-only">OnQueue — production scheduling</h1>
+    <div class="logo"><span class="mark" aria-hidden="true"><svg viewBox="-278.0 -178.0 1386.0 1386.0" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg"><path d="M545.00 1008.94 C511.88 1006.36 488.26 1000.40 464.50 988.61 C421.03 967.03 392.77 936.06 342.09 854.43 C335.16 843.28 328.32 832.16 326.87 829.73 L324.24 825.31 L313.37 824.63 C289.68 823.13 255.96 816.51 230.85 808.42 C128.74 775.51 57.44 699.47 31.20 595.50 C23.36 564.42 20.79 541.79 20.80 504.00 C20.85 405.40 42.04 318.96 85.52 239.88 C105.49 203.57 128.33 173.32 157.90 144.00 C180.58 121.52 207.68 100.07 232.50 84.96 C252.83 72.59 287.54 56.33 312.76 47.39 C397.64 17.28 507.47 12.09 585.01 34.53 C667.54 58.41 728.15 104.56 767.72 173.65 C798.85 228.00 812.08 289.09 808.94 363.93 C802.18 524.90 737.06 660.39 626.36 743.79 C596.91 765.98 557.04 787.10 521.82 799.18 L510.15 803.19 L519.72 817.84 C524.99 825.90 531.32 835.65 533.79 839.50 C541.76 851.94 554.53 869.20 565.24 882.00 C584.13 904.58 602.08 919.74 621.50 929.51 C642.11 939.89 653.45 941.27 688.00 937.61 C700.92 936.24 711.77 935.43 712.10 935.81 C712.43 936.19 714.16 945.50 715.94 956.50 C717.71 967.50 719.39 977.46 719.66 978.63 C720.10 980.51 719.15 981.12 711.33 983.95 C687.08 992.74 635.00 1003.66 599.50 1007.40 C581.38 1009.32 558.25 1009.97 545.00 1008.94 Z M395.47 763.03 C491.42 743.91 569.52 643.76 611.52 486.00 C631.29 411.71 638.09 326.45 629.46 261.00 C616.98 166.41 572.44 103.79 505.71 87.03 C461.25 75.86 413.58 83.77 372.74 109.10 C345.58 125.95 316.58 154.74 294.58 186.71 C249.85 251.69 213.04 357.29 201.58 453.50 C197.92 484.25 197.51 492.15 197.55 530.00 C197.60 569.35 198.23 578.70 202.59 605.00 C207.76 636.12 218.90 668.44 232.36 691.30 C256.42 732.19 289.46 756.13 332.66 764.00 C347.75 766.74 379.27 766.26 395.47 763.03 Z" fill="currentColor" fill-rule="evenodd"/></svg></span> <span aria-hidden="true">On<svg class="qsvg" viewBox="20 20 790 990" xmlns="http://www.w3.org/2000/svg"><path d="M545.00 1008.94 C511.88 1006.36 488.26 1000.40 464.50 988.61 C421.03 967.03 392.77 936.06 342.09 854.43 C335.16 843.28 328.32 832.16 326.87 829.73 L324.24 825.31 L313.37 824.63 C289.68 823.13 255.96 816.51 230.85 808.42 C128.74 775.51 57.44 699.47 31.20 595.50 C23.36 564.42 20.79 541.79 20.80 504.00 C20.85 405.40 42.04 318.96 85.52 239.88 C105.49 203.57 128.33 173.32 157.90 144.00 C180.58 121.52 207.68 100.07 232.50 84.96 C252.83 72.59 287.54 56.33 312.76 47.39 C397.64 17.28 507.47 12.09 585.01 34.53 C667.54 58.41 728.15 104.56 767.72 173.65 C798.85 228.00 812.08 289.09 808.94 363.93 C802.18 524.90 737.06 660.39 626.36 743.79 C596.91 765.98 557.04 787.10 521.82 799.18 L510.15 803.19 L519.72 817.84 C524.99 825.90 531.32 835.65 533.79 839.50 C541.76 851.94 554.53 869.20 565.24 882.00 C584.13 904.58 602.08 919.74 621.50 929.51 C642.11 939.89 653.45 941.27 688.00 937.61 C700.92 936.24 711.77 935.43 712.10 935.81 C712.43 936.19 714.16 945.50 715.94 956.50 C717.71 967.50 719.39 977.46 719.66 978.63 C720.10 980.51 719.15 981.12 711.33 983.95 C687.08 992.74 635.00 1003.66 599.50 1007.40 C581.38 1009.32 558.25 1009.97 545.00 1008.94 Z M395.47 763.03 C491.42 743.91 569.52 643.76 611.52 486.00 C631.29 411.71 638.09 326.45 629.46 261.00 C616.98 166.41 572.44 103.79 505.71 87.03 C461.25 75.86 413.58 83.77 372.74 109.10 C345.58 125.95 316.58 154.74 294.58 186.71 C249.85 251.69 213.04 357.29 201.58 453.50 C197.92 484.25 197.51 492.15 197.55 530.00 C197.60 569.35 198.23 578.70 202.59 605.00 C207.76 636.12 218.90 668.44 232.36 691.30 C256.42 732.19 289.46 756.13 332.66 764.00 C347.75 766.74 379.27 766.26 395.47 763.03 Z" fill="#7d6fa6" fill-rule="evenodd"/></svg>ueue</span></div>
+    <div class="tabs" role="group" aria-label="Right panel view"><span class="tab on" data-v="schedule" aria-pressed="true">Schedule</span><span class="tab" data-v="notifications" aria-pressed="false">Notifications</span></div>
+    <div class="grow"></div>
+    <div class="wknav"><span class="a" data-nav="prev">‹</span><span class="lbl">Sep 8 – 12 · This week</span><span class="a" data-nav="next">›</span></div>
+    <div class="search" aria-hidden="true">Search jobs…</div>
+    <button class="addbtn" id="addbtn">+ Add Job</button>
+  </div>
+
+  <div class="main" role="main" aria-label="Production schedule">
+    <div class="boardwrap">
+      <div class="boardhead">
+        <h2>Production board</h2>
+        <div class="dayview">
+          <span class="dv on" data-view="shift">Shift hrs</span>
+          <span class="dv" data-view="extended">Extended</span>
+        </div>
+        <div class="filters">
+          <div class="mtog on" data-t="emb"><span class="dot"></span>Embroidery</div>
+          <div class="mtog" data-t="scr"><span class="dot"></span>Screen Print</div>
+          <div class="mtog" data-t="dtf"><span class="dot"></span>DTF</div>
+        </div>
+      </div>
+
+      <div class="laneswrap" id="laneswrap">
+        <span class="llbl" id="llbl">Embroidery machines</span>
+        <div class="ltog on" data-lane="0"><span class="ld"></span>M1</div>
+        <div class="ltog on" data-lane="1"><span class="ld"></span>M2</div>
+      </div>
+
+      <div class="changebar" id="changebar" role="status" aria-live="polite" hidden>
+        <span class="cbmsg"><span class="cbdot"></span>Unsaved changes to the schedule</span>
+        <span class="cbacts"><button class="cbrevert" id="cbrevert">Revert to previous</button><button class="cbsave" id="cbsave">Save changes</button></span>
+      </div>
+
+      <div class="grid" id="grid"></div>
+    </div>
+
+    <div class="rail" id="rail">
+      <div class="railhead" id="railhead"></div>
+      <div class="raillist" id="raillist"></div>
+    </div>
+  </div>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<div class="drawer" id="drawer" role="dialog" aria-modal="true" aria-label="Job details" aria-hidden="true"></div>
+
+<div class="ajover" id="ajover" role="dialog" aria-modal="true" aria-labelledby="ajtitle" hidden>
+  <div class="modal">
+    <div class="mhead">
+      <div><h1 id="ajtitle">Add a job</h1><div class="crumb">New job · unsaved</div></div>
+      <div class="x" id="ajx">×</div>
+    </div>
+    <div class="body">
+      <div class="form">
+        <div class="sec"><h2>Order</h2>
+          <div class="row">
+            <div class="fld"><label>Customer <span class="req">*</span></label><input class="in" id="aj-cust" placeholder="Customer name"></div>
+            <div class="fld s"><label>Order / PO #</label><input class="in filled" id="aj-po" value="1043"></div>
+          </div>
+          <div class="row">
+            <div class="fld s"><label>Due date <span class="req">*</span></label><input class="in" id="aj-due" placeholder="mm / dd"></div>
+            <div class="fld"><label>Due date type</label><div class="tog"><div class="t on">Hard deadline</div><div class="t">Soft / flexible</div></div></div>
+          </div>
+        </div>
+        <div class="sec"><h2>Decoration method</h2>
+          <div class="seg"><div class="opt on">Embroidery</div><div class="opt">Screen print</div><div class="opt">DTF</div></div>
+          <div class="hint">Fields below adapt to the selected method.</div>
+        </div>
+        <div class="sec"><h2>Design &amp; Placement</h2>
+          <div id="aj-locs">
+            <div class="loc">
+              <div class="lh"><span>LOCATION 1</span><span class="del">Remove</span></div>
+              <div class="row">
+                <div class="fld"><label>Design</label><div class="tog aj-design"><div class="t on" data-v="new">New design</div><div class="t" data-v="rerun">Rerun File</div></div></div>
+                <div class="fld"><label>Production file</label><div class="in sel"><span>Upload / attach file</span><span class="chev up"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></span></div></div>
+              </div>
+              <div class="row">
+                <div class="fld s"><label>Digitizing needed?</label><div class="tog aj-dig"><div class="t on">Yes</div><div class="t">No</div></div></div>
+                <div class="fld s"><label>Sample / approval?</label><div class="tog aj-sample"><div class="t on">Yes</div><div class="t">No</div></div></div>
+              </div>
+              <div class="row">
+                <div class="fld"><label>Placement</label><input class="in filled" value="Left chest"></div>
+                <div class="fld s"><label>Stitch count</label><div class="in filled">9,000</div></div>
+                <div class="fld s"><label>Trims</label><div class="in filled">12</div></div>
+                <div class="fld s"><label>Thread changes</label><div class="in filled">3</div></div>
+              </div>
+              <div class="hint">Stitch count, trims, and thread changes auto-fill from the design file. Rough until digitized.</div>
+            </div>
+          </div>
+          <div class="addloc" id="aj-addloc">+ Add another location (sleeve, back, cap…)</div>
+        </div>
+        <div class="sec"><h2>Garment</h2>
+          <div class="row">
+            <div class="fld"><label>Garment type <span class="req">*</span></label><select class="in sel filled" id="aj-garment"></select></div>
+            <div class="fld"><label>Fabric / material <span class="req">*</span></label><select class="in sel filled" id="aj-fabric"></select></div>
+            <div class="fld s"><label>Quantity <span class="req">*</span></label><input class="in filled" id="aj-qty" value="48"></div>
+          </div>
+        </div>
+        <div class="sec"><h2>Production</h2>
+          <div class="row">
+            <div class="fld"><label>Machine</label><select class="in sel filled" id="aj-machine"><option>M1 - 6-Head</option><option>M2 - 6-Head</option></select></div>
+            <div class="fld"><label>Operator (optional)</label><input class="in" id="aj-op" placeholder="Unassigned"></div>
+          </div>
+        </div>
+      </div>
+      <div class="side">
+        <div class="notes"><h3>Notes</h3>
+          <textarea class="notesbox" placeholder="Quick note for the team — e.g. customer dropping blanks off Thursday, match thread to last run…"></textarea>
+        </div>
+        <div class="estcard"><h3>Estimated time</h3>
+          <p class="big" id="aj-big">~5.5 hrs</p>
+          <p class="biglab" id="aj-biglab">Production time · 48 pieces</p>
+          <div class="brk">
+            <div class="bt"><span id="aj-setuplab">Setup (new design)</span><span class="v" id="aj-setup">45 min</span></div>
+            <div class="bt"><span>Machine run</span><span class="v" id="aj-machrun">2.9 hrs</span></div>
+            <div class="bt"><span>Per-piece labor</span><span class="v" id="aj-labor">3.2 hrs</span></div>
+          </div>
+          <div class="fit"><span id="aj-cycles">8 cycles</span><span id="aj-cyclab">ceil(48 ÷ 6 heads)</span></div>
+          <div class="fit"><span>Turnaround</span><b>~6 business days</b></div>
+          <div class="fit"><span>Earliest fit</span><b>Tue, Sep 15</b></div>
+          <div class="addtime">
+            <span class="atlabel">Additional time</span>
+            <div class="stepper">
+              <button class="stbtn" id="aj-atminus" aria-label="Decrease">‹</button>
+              <input class="atin" id="aj-atval" value="0.0" aria-label="Additional time in hours">
+              <button class="stbtn" id="aj-atplus" aria-label="Increase">›</button>
+              <span class="atunit">hrs</span>
+            </div>
+          </div>
+          <p class="estnote">Rough while the design is new. Locks in after digitizing gives the real stitch count.</p>
+        </div>
+      </div>
+    </div>
+    <div class="foot">
+      <button class="btn ghost" id="ajcancel">Cancel</button>
+      <div class="spacer"></div>
+      <button class="btn" id="ajdraft">Save as draft</button>
+      <button class="btn primary" id="ajadd">Add to schedule</button>
+      <button class="btn primary" id="ajsave" hidden>Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const days=[['Mon','Sep 8'],['Tue','Sep 9'],['Wed','Sep 10'],['Thu','Sep 11'],['Fri','Sep 12']];
+  const times=['','10','11','12 PM','1','2','3','4',''];  // 9 AM / 5 PM endpoints hidden
+  const DAYS=5, DAY_HOURS=8;                 // Mon\u2013Fri, 9 AM\u20135 PM
+  const dayDate=[8,9,10,11,12];              // Sep date for each visible column
+  const wk={8:'Mon',9:'Tue',10:'Wed',11:'Thu',12:'Fri',15:'Mon',16:'Tue',17:'Wed',18:'Thu',19:'Fri',
+    22:'Mon',23:'Tue',24:'Wed',25:'Thu',26:'Fri'};
+
+  // One machine per method. Jobs run sequentially, in order, and take their full run
+  // time \u2014 a job spills into the next day rather than overlapping the one after it.
+  // hrs = run time in working hours. Status is computed from the finish date vs. the due date.
+  const data={
+    // lane = which machine (0 = M1, 1 = M2). Each machine is its own queue.
+    // Each lane is packed to ~40 hrs = a full Mon\u2013Fri week.
+    emb:[
+      {cust:'Wantagh Baseball',count:'300 caps',  rerun:true, hrs:11,due:'Sep 10',hard:true, lane:0},
+      {cust:'Titans JV',       count:'80 hoodies',rerun:false,hrs:5, due:'Sep 16',hard:false,lane:0},
+      {cust:'Maple Dental',    count:'40 scrubs', rerun:true, hrs:6, due:'Sep 9', hard:false,lane:0},
+      {cust:'Lakeside Camp',   count:'300 tees',  rerun:false,hrs:3, due:'Sep 19',hard:false,lane:0},
+      {cust:'Grove Academy',   count:'220 hoodies',rerun:false,hrs:6,due:'Sep 22',hard:false,lane:0},
+      {cust:'Pinehurst Golf',  count:'60 polos',  rerun:false,hrs:5, due:'Sep 24',hard:false,lane:0},
+      {cust:'Bayline FC',      count:'90 jerseys',rerun:false,hrs:3, due:'Sep 23',hard:false,lane:0},
+      {cust:'Titan Cup',       count:'260 caps',  rerun:false,hrs:9, due:'Sep 12',hard:false,lane:0},
+      {cust:'Cedar Realty',    count:'150 polos', rerun:false,hrs:4, due:'Sep 15',hard:true, lane:1},
+      {cust:'Delta Corp',      count:'48 polos',  rerun:false,hrs:4, due:'Sep 15',hard:false,lane:1},
+      {cust:'Northside FD',    count:'120 jackets',rerun:false,hrs:5,due:'Sep 11',hard:false,lane:1},
+      {cust:'Riverside Crew',  count:'200 caps',  rerun:false,hrs:3, due:'Sep 18',hard:false,lane:1},
+      {cust:'Harborview HS',   count:'140 caps',  rerun:false,hrs:6, due:'Sep 22',hard:false,lane:1},
+      {cust:'Sunset Diner',    count:'36 aprons', rerun:false,hrs:3, due:'Sep 22',hard:false,lane:1},
+      {cust:'Maple Leaf Co',   count:'110 polos', rerun:false,hrs:5, due:'Sep 23',hard:false,lane:1},
+      {cust:'Orchard Farms',   count:'130 tees',  rerun:false,hrs:5, due:'Sep 24',hard:false,lane:1},
+      {cust:'Vista Prep',      count:'80 hoodies',rerun:false,hrs:5, due:'Sep 25',hard:false,lane:1},
+    ],
+    scr:[
+      {cust:'Corona Tigers',   count:'150 tees', rerun:false,hrs:6, due:'Sep 10',hard:false,lane:0},
+      {cust:'Blue Wave',       count:'600 tees', rerun:false,hrs:12,due:'Sep 9', hard:false,lane:0},
+      {cust:'Skate Co',        count:'200 hoodies',rerun:false,hrs:3,due:'Sep 17',hard:false,lane:0},
+      {cust:'Riverside HS',    count:'72 hoodies',rerun:true, hrs:3,due:'Sep 16',hard:false,lane:0},
+      {cust:'Metro League',    count:'250 tees', rerun:false,hrs:6, due:'Sep 22',hard:false,lane:0},
+      {cust:'Foxhill Run',     count:'300 tees', rerun:false,hrs:5, due:'Sep 24',hard:false,lane:0},
+      {cust:'Beacon Youth',    count:'180 tees', rerun:false,hrs:4, due:'Sep 23',hard:false,lane:0},
+      {cust:'Harbor Marathon', count:'800 tees', rerun:false,hrs:8, due:'Sep 12',hard:false,lane:0},
+      {cust:'Freeport 9/11',   count:'300 tees', rerun:false,hrs:4, due:'Sep 11',hard:true, lane:1},
+      {cust:'City Rec',        count:'500 tees', rerun:false,hrs:4, due:'Sep 16',hard:false,lane:1},
+      {cust:'Harbor Fest',     count:'400 tees', rerun:false,hrs:5, due:'Sep 15',hard:false,lane:1},
+      {cust:'PTA Fun Run',     count:'350 tees', rerun:false,hrs:4, due:'Sep 19',hard:false,lane:1},
+      {cust:'Ridgeway HS',     count:'400 tees', rerun:false,hrs:6, due:'Sep 22',hard:false,lane:1},
+      {cust:'Union Caf\u00e9',      count:'150 tees', rerun:false,hrs:4, due:'Sep 22',hard:false,lane:1},
+      {cust:'Delta Rowing',    count:'220 tees', rerun:false,hrs:5, due:'Sep 23',hard:false,lane:1},
+      {cust:'Parkside Fair',   count:'350 tees', rerun:false,hrs:4, due:'Sep 24',hard:false,lane:1},
+      {cust:'Cove Athletics',  count:'120 hoodies',rerun:false,hrs:3,due:'Sep 25',hard:false,lane:1},
+    ],
+    dtf:[
+      {cust:'Yacht Club',      count:'60 tees',  rerun:false,hrs:3, due:'Sep 9', hard:true, lane:0},
+      {cust:'Bayside Bar',     count:'90 shirts',rerun:false,hrs:5, due:'Sep 11',hard:false,lane:0},
+      {cust:'Etsy Batch',      count:'150 sheets',rerun:true, hrs:8,due:'Sep 12',hard:false,lane:0},
+      {cust:'Team Volley',     count:'75 jerseys',rerun:false,hrs:4,due:'Sep 9', hard:false,lane:0},
+      {cust:'Rincon Surf',     count:'120 tees', rerun:false,hrs:5, due:'Sep 22',hard:false,lane:0},
+      {cust:'Harper Goods',    count:'200 sheets',rerun:false,hrs:6,due:'Sep 24',hard:false,lane:0},
+      {cust:'Tidewater Co',    count:'90 shirts',rerun:false,hrs:4, due:'Sep 23',hard:false,lane:0},
+      {cust:'Lumen Studio',    count:'60 tees',  rerun:false,hrs:4, due:'Sep 25',hard:false,lane:0},
+      {cust:'Marsh Caf\u00e9',      count:'120 aprons',rerun:false,hrs:4,due:'Sep 11',hard:false,lane:1},
+      {cust:'Nolan Studio',    count:'40 tees',  rerun:false,hrs:3, due:'Sep 15',hard:false,lane:1},
+      {cust:'Print Drop',      count:'200 sheets',rerun:false,hrs:6,due:'Sep 16',hard:false,lane:1},
+      {cust:'Local Makers',    count:'180 tees', rerun:false,hrs:3, due:'Sep 19',hard:false,lane:1},
+      {cust:'Cobalt Press',    count:'180 sheets',rerun:false,hrs:6,due:'Sep 22',hard:false,lane:1},
+      {cust:'Seaside Gifts',   count:'70 totes', rerun:false,hrs:4, due:'Sep 22',hard:false,lane:1},
+      {cust:'Nova Apparel',    count:'150 tees', rerun:false,hrs:5, due:'Sep 23',hard:false,lane:1},
+      {cust:'Bright Threads',  count:'130 tees', rerun:false,hrs:5, due:'Sep 24',hard:false,lane:1},
+      {cust:'Alder & Co',      count:'80 tees',  rerun:false,hrs:3, due:'Sep 25',hard:false,lane:1},
+    ],
+  };
+  const mname={emb:'Embroidery',scr:'Screen Print',dtf:'DTF'};
+  const tint={emb:'#fbfaf8',scr:'#f4f4f2',dtf:'#fbfbfb'};
+  const dueNum=s=>parseInt(String(s).replace(/\D+/g,''),10);
+
+  // Hour model per machine-day: hours 0\u20137 = the 9\u20135 shift (normal capacity).
+  // Hours 8+ = evening overtime (5 PM onward, up to OT_MAX \u2192 midnight), shown shaded.
+  const OT_MAX=7;                            // evening OT hours available (5 PM \u2192 midnight)
+  // Level a lane's total work across the week: fill the 8-hr shift each day, and only
+  // dip into evening overtime \u2014 spread evenly \u2014 when the week is overbooked past 40 hrs.
+  function dayCaps(H){
+    const caps=[]; let work=H;
+    for(let d=0; d<DAYS; d++){
+      const normalRest=8*(DAYS-d);
+      let c;
+      if(work<=normalRest) c=Math.min(8,work);
+      else c=8+Math.min(OT_MAX,Math.ceil((work-normalRest)/(DAYS-d)));
+      caps.push(c); work-=c; if(work<0){caps[d]+=work; work=0;}
+    }
+    return caps;                             // hours worked each day (8 = shift only, >8 = uses OT)
+  }
+  // Pack one machine's queue into segments; compute finish date + status.
+  // slack = due date \u2212 finish date (in days):  <0 red \u00b7 0\u20132 yellow \u00b7 >2 green.
+  // Overtime is available capacity, not a failure \u2014 a job that only fits by working
+  // late still lands on time; it's flagged with usesOT rather than turned red.
+  function schedule(jobs){
+    const caps=dayCaps(jobs.reduce((s,j)=>s+j.hrs,0));
+    let d=0, h=0;
+    return jobs.map(j=>{
+      let rem=j.hrs; const segs=[];
+      while(rem>0 && d<DAYS){
+        const avail=caps[d]-h;
+        if(avail<=0){ d++; h=0; continue; }
+        const take=Math.min(avail,rem);
+        segs.push({day:d,start:h,len:take});
+        h+=take; rem-=take;
+        if(h>=caps[d]){ d++; h=0; }
+      }
+      const overflow=rem>0;                  // ran off the end of the week even with OT
+      const finishDay=segs.length?segs[segs.length-1].day:DAYS-1;
+      const finishDate=overflow?99:dayDate[finishDay];
+      const slack=dueNum(j.due)-finishDate;
+      const status=(overflow||slack<0)?'red':(slack<=2?'yel':'grn');
+      const usesOT=segs.some(s=>s.start+s.len>8);
+      const primary=segs.reduce((b,s,i)=>s.len>segs[b].len?i:b,0);
+      return {...j,segs,finishDate,finishDay,status,primary,overflow,usesOT};
+    });
+  }
+  const laneCount={emb:2,scr:2,dtf:2};
+  const METHOD_ORDER=['emb','scr','dtf'];
+  function computeMethodArr(meth,src){
+    let out=[];
+    for(let ln=0; ln<laneCount[meth]; ln++){
+      const laneJobs=[];
+      src.forEach((j,di)=>{ if((j.lane||0)===ln) laneJobs.push({...j,di}); });
+      out=out.concat(schedule(laneJobs));
+    }
+    return out;
+  }
+  function computeAll(){
+    const out={};
+    for(const k in data) out[k]=computeMethodArr(k, (dragPrev&&dragPrev.meth===k)?dragPrev.arr:data[k]);
+    return out;
+  }
+  function activeTracks(){
+    const activeM=[...document.querySelectorAll('.mtog.on')].map(b=>b.dataset.t);
+    const activeLanes=[...document.querySelectorAll('.ltog.on')].map(b=>+b.dataset.lane);
+    const tracks=[];
+    METHOD_ORDER.forEach(m=>{
+      if(!activeM.includes(m))return;
+      for(let ln=0; ln<laneCount[m]; ln++){
+        if(!activeLanes.includes(ln))continue;   // machine chips filter the selected method
+        tracks.push({m,lane:ln,label:'M'+(ln+1)});
+      }
+    });
+    return tracks;
+  }
+
+  const LOCK_HARD=`<svg viewBox="0 0 10 12" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="5" width="8" height="6.2" rx="1.2" fill="currentColor"/><path d="M2.8 5V3.4a2.2 2.2 0 0 1 4.4 0V5" stroke="currentColor" stroke-width="1.1"/></svg>`;
+  const LOCK_SOFT=`<svg viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="5" width="8" height="6.2" rx="1.2" fill="currentColor"/><path d="M2.8 5V3.4a2.2 2.2 0 0 1 4.4-0.5" stroke="currentColor" stroke-width="1.1"/></svg>`;
+  const CHK=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+  // Status glyphs inside the card dot so status isn't conveyed by color alone (WCAG 1.4.1)
+  const SICON={
+    grn:`<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="19 7.5 10 16.5 5 12"/></svg>`,
+    yel:`<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round"><line x1="6" y1="12" x2="18" y2="12"/></svg>`,
+    red:`<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5.5" x2="12" y2="14"/><line x1="12" y1="18" x2="12" y2="18.4"/></svg>`
+  };
+  // A completed job is clipped so its block ends at the day/time it was marked done.
+  function doneSegs(j){
+    const nd=j.doneDay, np=j.donePos, out=[];
+    j.segs.forEach(s=>{
+      if(s.day<nd) out.push({...s});
+      else if(s.day===nd){ const end=Math.min(s.start+s.len,np); if(end>s.start) out.push({day:s.day,start:s.start,len:end-s.start}); }
+    });
+    if(!out.length){ const s=j.segs[0]; if(s) out.push({day:s.day,start:s.start,len:Math.min(s.len,0.5)}); }
+    return out;
+  }
+
+  function mk(t,c,s){const e=document.createElement('div');e.className=c;if(s)e.setAttribute('style',s);if(t!=null)e.innerHTML=t;return e;}
+  const g=document.getElementById('grid');
+  let dragPrev=null, dragBase=null, dragStartJSON=null;   // live drag-preview state
+  let computed=computeAll();
+
+  // hour offsets: 0 = 9 AM.  \u22123 = 6 AM.  8 = 5 PM.  15 = midnight.
+  let dayView='shift';
+  const RANGES={shift:{first:0,last:7,rowH:56},extended:{first:-3,last:14,rowH:30}};
+  function hourLabel(hb){
+    let c=((9+hb)%24+24)%24;
+    if(c===0) return '12 AM'; if(c===12) return '12 PM';
+    const hr=c%12===0?12:c%12; return hr+(c<12?' AM':' PM');
+  }
+
+  function build(){
+    computed=computeAll();
+    const tracks=activeTracks();
+    g.innerHTML='';
+    const perDay=tracks.length;
+    if(perDay===0){ g.style.gridTemplateColumns='1fr'; g.style.gridTemplateRows='auto';
+      g.appendChild(mk('Turn on a decoration method to see the schedule.','empty')); syncRailHeight(); return; }
+    g.classList.toggle('one-lane', perDay===1);     // wider columns → larger single-line due date
+    const laneRow = perDay>1;                       // M1/M2 label row when both machines shown
+    const R0 = laneRow?3:2;
+    const {first,last,rowH}=RANGES[dayView];
+    const NROWS=last-first+1;
+    g.style.gridTemplateColumns='62px '+('1fr '.repeat(5*perDay)).trim();
+    g.style.gridTemplateRows=(laneRow?'30px 18px':'42px')+` repeat(${NROWS},${rowH}px)`;
+    g.appendChild(mk('','corner',laneRow?'grid-row:1 / span 2;grid-column:1':'grid-row:1;grid-column:1'));
+    days.forEach((d,di)=>g.appendChild(mk(`<div class="d">${d[0]} \u00b7 ${d[1]}</div>`,'dayhead',
+      `grid-row:1;grid-column:${2+di*perDay} / span ${perDay}`)));
+    if(laneRow){
+      for(let di=0; di<5; di++) tracks.forEach((t,ti)=>{
+        const isDayEnd=ti===perDay-1;
+        g.appendChild(mk(`<span class="ll">${t.label}</span>`,'lanehead'+(isDayEnd?' db':''),
+          `grid-row:2;grid-column:${2+di*perDay+ti}`));
+      });
+    }
+    // time labels \u2014 one per gridline (NROWS+1), endpoints blank
+    let labels;
+    if(dayView==='shift') labels=['','10','11','12 PM','1','2','3','4',''];
+    else { labels=[]; for(let i=0;i<=NROWS;i++) labels.push((i===0||i===NROWS)?'':hourLabel(first+i)); }
+    g.appendChild(mk(labels.map(t=>`<div class="timelbl">${t}</div>`).join(''),'timecol',`grid-column:1;grid-row:${R0} / span ${NROWS}`));
+    // background cells; hours <0 or \u22658 are off-shift (shaded)
+    for(let di=0; di<5; di++) for(let ti=0; ti<perDay; ti++){
+      const t=tracks[ti], col=2+di*perDay+ti, isDayEnd=ti===perDay-1;
+      for(let hh=first; hh<=last; hh++){
+        const off=(hh<0||hh>=8);
+        const cell=mk('','cell'+(isDayEnd?' db':'')+(off?' off':'')+((hh===0||hh===8)?' shiftline':''),
+          `grid-row:${R0+(hh-first)};grid-column:${col};background:${off?'#eceae3':tint[t.m]}`);
+        cell.dataset.day=di; cell.dataset.lane=t.lane; cell.dataset.hour=hh;
+        g.appendChild(cell);
+      }
+    }
+    // job blocks (clipped to the visible window); collect off-shift OT hours for shift-view badges
+    const otMap={};
+    tracks.forEach((t,ti)=>computed[t.m].filter(j=>(j.lane||0)===t.lane).forEach(j=>{
+      const segList = j.segs;               // completed jobs stay exactly where they are, full size
+      const primIdx = j.primary;
+      segList.forEach((sg,si)=>{
+        if(!j.done){
+          const otHrs=Math.max(0,(sg.start+sg.len)-Math.max(sg.start,8));
+          if(otHrs>0){ const k=sg.day+'|'+ti; otMap[k]=(otMap[k]||0)+otHrs; }
+        }
+        const vs=Math.max(sg.start,first), ve=Math.min(sg.start+sg.len,last+1);
+        if(ve<=vs) return;                          // segment entirely outside the window
+        const col=2+sg.day*perDay+ti, isPrimary=si===primIdx;
+        if(j._drag){                                // drop placeholder (Trello-style)
+          const ph=mk(isPrimary?`<div class="phlabel">${j.cust}</div>`:'','block placeholder',
+            `grid-row:${R0+(vs-first)} / span ${ve-vs};grid-column:${col}`);
+          g.appendChild(ph); return;
+        }
+        let inner;
+        if(isPrimary){
+          const badge = j.done ? `<span class="dchk">${CHK}</span>` : `<span class="sdot ${j.status}" role="img" aria-label="${stLabel[j.status]}">${SICON[j.status]}</span>`;
+          const ddtxt = j.done ? `<span class="ddd">Completed</span>` : `<span class="ddl">Due</span><span class="ddd">${j.due}</span>`;
+          inner=`<div class="btab ${j.hard?'hard':''}"><span class="lk" data-meth="${t.m}" data-idx="${j.di}" title="${j.hard?'Hard due date \u2014 click to make soft':'Soft due date \u2014 click to lock as hard'}">${j.hard?LOCK_HARD:LOCK_SOFT}</span><span class="dd">${ddtxt}</span>${badge}</div>`+
+            `<div class="bbody"><div class="m">${mname[t.m]}</div><div class="c">${j.cust}</div>`+
+            `<div class="ct">${j.count} \u00b7 ${j.rerun?'rerun':'new'}${(!j.done&&j.usesOT)?' \u00b7 <span class="otf">OT</span>':''}</div></div>`;
+        }else{
+          const dir = sg.day<segList[primIdx].day ? 'starts here' : 'cont.';
+          inner=`<div class="cont"><span class="cn">${j.cust}</span><span class="cc">${dir}</span></div>`;
+        }
+        const blk=mk(inner,'block st-'+j.status+(isPrimary?'':' continued')+(j.done?' done':'')+((!j.done&&sg.start>=8)?' otblock':''),
+          `grid-row:${R0+(vs-first)} / span ${ve-vs};grid-column:${col}`);
+        blk.dataset.meth=t.m; blk.dataset.idx=j.di;
+        g.appendChild(blk);
+      });
+    }));
+    if(dayView==='shift') for(const k in otMap){
+      const [dd,ti]=k.split('|').map(Number);
+      g.appendChild(mk(`\uff0b${otMap[k]}h OT`,'otbadge',`grid-row:${R0+7};grid-column:${2+dd*perDay+ti}`));
+    }
+    syncRailHeight();
+  }
+  function updateLaneLabel(){
+    const cur=document.querySelector('.mtog.on');
+    const t=cur?cur.dataset.t:'';
+    document.getElementById('llbl').textContent=(t?mname[t]:'')+' machines';
+    document.getElementById('laneswrap').className='laneswrap m-'+t;
+  }
+  function syncRailHeight(){
+    const bw=document.querySelector('.boardwrap');
+    if(bw) document.getElementById('rail').style.height=bw.offsetHeight+'px';
+  }
+
+  // right panel
+  const stLabel={red:'At risk',yel:'Cutting it close',grn:'On track'};
+  const methName={emb:'Embroidery',scr:'Screen print',dtf:'DTF'};
+  const qty=j=>parseInt(String(j.count).replace(/\D+/g,''),10)||0;
+  // stable pseudo order-date (day number) from customer name \u2014 stands in for a real "date ordered"
+  function ordNum(j){ let h=0; for(const c of j.cust) h=(h*31+c.charCodeAt(0))>>>0; return h%20; }
+  const sortName={due:'Due date',order:'Order date',qty:'Quantity',run:'Run time'};
+  const sorters={
+    due:(a,b)=>dueNum(a.j.due)-dueNum(b.j.due),
+    order:(a,b)=>ordNum(a.j)-ordNum(b.j),
+    qty:(a,b)=>qty(b.j)-qty(a.j),
+    run:(a,b)=>b.j.hrs-a.j.hrs,
+  };
+  let sortBy='due';
+  function schedRows(cur,activeLanes){
+    if(!cur) return {n:0,html:'<p class="subh" style="padding-top:12px">No method selected.</p>'};
+    let rows=computed[cur].filter(j=>activeLanes.includes(j.lane||0)).map(j=>({meth:cur,j}));
+    rows.sort(sorters[sortBy]);
+    if(!rows.length) return {n:0,html:'<p class="subh" style="padding-top:12px">No orders for the selected machines.</p>'};
+    const html=rows.map(({meth,j})=>{
+      const dl=`${wk[dueNum(j.due)]||''}, ${j.due}`;
+      return `<div class="ord m-${meth}"><div class="barcol"></div><div class="mid"><div class="c">${j.cust}</div><div class="meta">${methName[meth]} \u00b7 ${j.count}</div></div><div class="right"><div class="due">${dl}</div><span class="st ${j.status}">${stLabel[j.status]}</span></div></div>`;
+    }).join('');
+    return {n:rows.length,html};
+  }
+
+  // Change feed. Rule: a hard-date job posts whenever it moves; a soft-date job
+  // posts only when the move leaves it at risk or cutting it close (not green).
+  const notifs=[
+    {meth:'scr',cust:'Blue Wave',   when:'12m',txt:'Bumped behind the Freeport rush. On the current run it finishes Thu Sep 11 \u2014 past its Sep 10 due date.'},
+    {meth:'emb',cust:'Maple Dental',when:'25m',txt:'Its Sep 9 rush is queued on Machine 1 behind Wantagh and Titans, so it finishes Wed Sep 10 \u2014 the date will be missed. Moving it to Machine 2 would clear it.'},
+    {meth:'dtf',cust:'Yacht Club',  when:'40m',txt:'Hard date. Rescheduled to Mon 9 AM after a machine changeover. Finishes Mon \u2014 one day of slack before Sep 9.'},
+    {meth:'emb',cust:'Wantagh Baseball',when:'1h',txt:'Hard date. Running on Machine 1; the 300-cap run fills Mon and spills into Tue morning. Finishes Sep 9, a day ahead of its Sep 10 date.'},
+    {meth:'scr',cust:'Corona Tigers',when:'3h',txt:'Runs first on the press Mon. Finishes Mon Sep 8, cutting it close to its Sep 10 date after the earlier shuffle.'},
+    {meth:'dtf',cust:'Team Volley', when:'4h',txt:'Reflowed behind the Etsy Batch rerun. Finishes Fri Sep 12 \u2014 its Sep 11 date will be missed.'},
+    {meth:'emb',cust:'Cedar Realty',when:'5h',txt:'Hard date. Assigned to Machine 2, runs Mon first. Comfortably on track for Sep 15.'},
+  ];
+  function statusFor(cust){
+    for(const k in computed){const f=computed[k].find(j=>j.cust===cust);if(f)return f;} return null;
+  }
+  // Notifications are filtered by method only (regardless of which machine is selected).
+  function notifRows(){
+    const rows = notifMethod==='all' ? notifs : notifs.filter(n=>n.meth===notifMethod);
+    if(!rows.length) return '<p class="subh" style="padding-top:12px">No changes for this method.</p>';
+    return rows.map(n=>{
+      const j=statusFor(n.cust); const s=j?j.status:'grn'; const hard=j?j.hard:false;
+      const kind = hard ? `<span class="lkm">${LOCK_HARD}</span>Hard date \u00b7 moved`
+                  : (s==='red' ? 'Soft date \u00b7 now at risk' : 'Soft date \u00b7 watch');
+      return `<div class="note s-${s}"><span class="ndot"></span><div class="nmid"><div class="nhead"><span class="nc">${n.cust}</span><span class="nwhen">${n.when}</span></div><div class="nkind">${kind}</div><div class="ntxt">${n.txt}</div></div></div>`;
+    }).join('');
+  }
+
+  let view='schedule';
+  let notifMethod='emb';   // defaults to the method selected on the board
+  const railhead=document.getElementById('railhead');
+  const raillist=document.getElementById('raillist');
+  function renderSide(){
+    const cur=(document.querySelector('.mtog.on')||{dataset:{}}).dataset.t;
+    const activeLanes=[...document.querySelectorAll('.ltog.on')].map(b=>+b.dataset.lane);
+    if(view==='schedule'){
+      const r=schedRows(cur,activeLanes);
+      railhead.innerHTML=`<div class="railtop"><h2>Schedule</h2><label class="selwrap">Sort by `+
+        `<select id="sortsel">`+['due','order','qty','run'].map(k=>`<option value="${k}"${sortBy===k?' selected':''}>${sortName[k]}</option>`).join('')+
+        `</select></label></div><p class="subh">${r.n} order${r.n===1?'':'s'} on the selected machines</p>`;
+      raillist.innerHTML=r.html;
+      document.getElementById('sortsel').addEventListener('change',e=>{sortBy=e.target.value;renderSide();});
+    }else{
+      railhead.innerHTML=`<div class="railtop"><h2>Notifications</h2><label class="selwrap">`+
+        `<select id="notifsel">`+[['all','All'],['emb','Embroidery'],['scr','Screen Print'],['dtf','DTF']].map(([v,n])=>`<option value="${v}"${notifMethod===v?' selected':''}>${n}</option>`).join('')+
+        `</select></label></div><p class="subh">Recent changes to the schedule</p>`;
+      raillist.innerHTML=notifRows();
+      document.getElementById('notifsel').addEventListener('change',e=>{notifMethod=e.target.value;renderSide();});
+    }
+    syncRailHeight();
+  }
+
+  let didDrag=false;
+  g.addEventListener('click',e=>{
+    if(didDrag) return;                          // this "click" was the end of a drag (cleared on next pointerdown)
+    const lk=e.target.closest('.lk');
+    if(lk){                                    // lock toggles hard/soft
+      const meth=lk.dataset.meth, idx=+lk.dataset.idx;
+      data[meth][idx].hard=!data[meth][idx].hard;
+      build(); renderSide(); return;
+    }
+    const blk=e.target.closest('.block');       // clicking the card opens the detail drawer
+    if(blk && blk.dataset.meth) openDrawer(blk.dataset.meth,+blk.dataset.idx);
+  });
+
+  // Trello-style drag: lift the card out, live-preview a drop placeholder, commit on release.
+  const changebar=document.getElementById('changebar');
+  let dirty=false, baseline=null, drag=null;
+
+  /* ---- hover-zoom legend: hovering a card-header zone shows an enlarged, labelled explainer ---- */
+  const zoomtip=document.createElement('div'); zoomtip.className='zoomtip'; zoomtip.hidden=true;
+  zoomtip.setAttribute('aria-hidden','true'); document.body.appendChild(zoomtip);
+  const stExplain={grn:'Comfortable slack before the due date',yel:'Little slack — watch this one',red:'Will miss the due date as scheduled'};
+  function showZoom(zone,el){
+    const btab=el.closest('.btab'); if(!btab) return;
+    let html='';
+    if(zone==='due'){
+      const ddv=btab.querySelector('.ddd'); const val=ddv?ddv.textContent:'';
+      const done=/completed/i.test(val);
+      html=`<div class="zt-due"><span class="zt-k">${done?'STATUS':'DUE'}</span><span class="zt-v">${val}</span></div>`+
+           `<div class="zt-cap">${done?'This job is finished':'Due date for this job'}</div>`;
+    }else if(zone==='lock'){
+      const hard=btab.classList.contains('hard');
+      html=`<div class="zt-ico ${hard?'hard':'soft'}">${hard?LOCK_HARD:LOCK_SOFT}</div>`+
+           `<div class="zt-lab">${hard?'Hard deadline':'Soft / flexible'}</div>`+
+           `<div class="zt-cap">${hard?'Locked — won’t move when the board reflows':'Can shift if the schedule needs it'}</div>`;
+    }else{
+      if(el.classList.contains('dchk')){
+        html=`<div class="zt-dot grn">${CHK}</div><div class="zt-lab">Completed</div>`+
+             `<div class="zt-cap">This job is finished</div>`;
+      }else{
+        const s=['grn','yel','red'].find(c=>el.classList.contains(c))||'grn';
+        html=`<div class="zt-dot ${s}">${SICON[s]}</div>`+
+             `<div class="zt-lab">${stLabel[s]}</div>`+
+             `<div class="zt-cap">${stExplain[s]}</div>`;
+      }
+    }
+    zoomtip.className='zoomtip zt-'+zone; zoomtip.innerHTML=html; zoomtip.hidden=false;
+    const r=el.getBoundingClientRect(), tw=zoomtip.offsetWidth, th=zoomtip.offsetHeight;
+    let left=r.left+r.width/2-tw/2; left=Math.max(8,Math.min(left,innerWidth-tw-8));
+    let top=r.top-th-10; if(top<8) top=r.bottom+10;
+    zoomtip.style.left=left+'px'; zoomtip.style.top=top+'px';
+    zoomtip.classList.toggle('below',top>r.bottom);
+  }
+  function hideZoom(){ zoomtip.hidden=true; }
+  g.addEventListener('mouseover',e=>{
+    if(drag) return;
+    const lk=e.target.closest('.lk'); if(lk){ showZoom('lock',lk); return; }
+    const sd=e.target.closest('.sdot,.dchk'); if(sd){ showZoom('status',sd); return; }
+    const dd=e.target.closest('.dd'); if(dd){ showZoom('due',dd); return; }
+  });
+  g.addEventListener('mouseout',e=>{
+    const to=e.relatedTarget;
+    if(to&&to.closest&&to.closest('.lk,.sdot,.dchk,.dd')) return;   // moving within a zone
+    hideZoom();
+  });
+  g.addEventListener('pointerdown',hideZoom,true);
+  window.addEventListener('scroll',hideZoom,true);
+
+  function cellUnder(x,y){ const els=document.elementsFromPoint(x,y);
+    return els.find(el=>el.classList&&el.classList.contains('cell')&&el.dataset.hour!==undefined)||null; }
+
+  // tentative ordering with the dragged job inserted at (lane, day, hour) — the rest reflows around it
+  function setPreview(meth,lane,day,hour){
+    const baseArr=data[meth].filter(o=>o!==dragBase);
+    const baseComp=computeMethodArr(meth,baseArr);
+    const dropIdx=day*100+hour;
+    let refDi=null;
+    for(const c of baseComp){ if((c.lane||0)!==lane)continue; const s=c.segs[0]; const si=s?s.day*100+s.start:9999;
+      if(si>=dropIdx){ refDi=c.di; break; } }
+    const pc={...dragBase,lane,_drag:true};
+    const arr=baseArr.slice();
+    if(refDi!=null) arr.splice(refDi,0,pc);
+    else { let last=-1; arr.forEach((o,i)=>{ if((o.lane||0)===lane) last=i; }); arr.splice(last+1,0,pc); }
+    dragPrev={meth,lane,day,hour,arr,pc};
+  }
+  function commitDrag(){
+    if(!dragPrev)return; const dp=dragPrev, before=dragStartJSON;
+    dragBase.lane=dp.lane;
+    data[dp.meth]=dp.arr.map(o=> o===dp.pc ? dragBase : o);
+    dragPrev=null; build(); renderSide();
+    if(!dirty && before && JSON.stringify(data)!==before){ baseline=before; dirty=true; changebar.hidden=false; }
+  }
+
+  g.addEventListener('pointerdown',e=>{
+    didDrag=false;
+    if(e.button)return;
+    if(e.target.closest('.lk'))return;
+    const blk=e.target.closest('.block'); if(!blk||!blk.dataset.meth)return;
+    if(blk.classList.contains('done'))return;     // completed jobs are locked in place
+    drag={meth:blk.dataset.meth,di:+blk.dataset.idx,x0:e.clientX,y0:e.clientY,blk,moved:false,ghost:null};
+    document.body.classList.add('dragsel');      // suppress text selection while a card is grabbed
+  });
+  window.addEventListener('pointermove',e=>{
+    if(!drag)return;
+    if(!drag.moved){
+      if(Math.hypot(e.clientX-drag.x0,e.clientY-drag.y0)<6)return;
+      drag.moved=true; dragBase=data[drag.meth][drag.di]; dragStartJSON=dirty?null:JSON.stringify(data);
+      const r=drag.blk.getBoundingClientRect();
+      const gh=drag.blk.cloneNode(true); gh.classList.add('ghost');
+      gh.style.width=r.width+'px'; gh.style.maxHeight='96px'; gh.style.left=e.clientX+'px'; gh.style.top=e.clientY+'px';
+      document.body.appendChild(gh); drag.ghost=gh; g.classList.add('dragging');
+      const c0=computed[drag.meth].find(x=>x.di===drag.di), s0=c0&&c0.segs[0];
+      setPreview(drag.meth,dragBase.lane||0,s0?s0.day:0,s0?s0.start:0); build();
+    }
+    e.preventDefault();
+    drag.ghost.style.left=e.clientX+'px'; drag.ghost.style.top=e.clientY+'px';
+    const c=cellUnder(e.clientX,e.clientY);
+    if(c){ const l=+c.dataset.lane,d=+c.dataset.day,h=+c.dataset.hour;
+      if(!dragPrev||dragPrev.lane!==l||dragPrev.day!==d||dragPrev.hour!==h){ setPreview(drag.meth,l,d,h); build(); } }
+  });
+  window.addEventListener('pointerup',()=>{
+    document.body.classList.remove('dragsel');
+    if(!drag)return; const d=drag; drag=null;
+    if(d.ghost)d.ghost.remove();
+    g.classList.remove('dragging');
+    if(d.moved){ didDrag=true; commitDrag(); }
+  });
+
+  document.getElementById('cbsave').addEventListener('click',()=>{ dirty=false; baseline=null; changebar.hidden=true; });
+  document.getElementById('cbrevert').addEventListener('click',()=>{
+    if(baseline){ const snap=JSON.parse(baseline); for(const k in snap) data[k]=snap[k]; }
+    dirty=false; baseline=null; changebar.hidden=true; build(); renderSide();
+  });
+  document.querySelectorAll('.mtog').forEach(b=>b.addEventListener('click',()=>{
+    if(b.classList.contains('on'))return;                     // single-select: one method at a time
+    document.querySelectorAll('.mtog').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    document.querySelectorAll('.ltog').forEach(l=>l.classList.add('on')); // reset machines when switching method
+    notifMethod=b.dataset.t;   // notifications dropdown defaults to the selected method
+    updateLaneLabel(); build(); renderSide();
+  }));
+  document.querySelectorAll('.ltog').forEach(b=>b.addEventListener('click',()=>{b.classList.toggle('on');build();renderSide();}));
+  document.querySelectorAll('.dv').forEach(b=>b.addEventListener('click',()=>{
+    if(b.classList.contains('on'))return;
+    document.querySelectorAll('.dv').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on'); dayView=b.dataset.view; build();
+  }));
+  document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(x=>{x.classList.remove('on');x.setAttribute('aria-pressed','false');});
+    t.classList.add('on'); t.setAttribute('aria-pressed','true'); view=t.dataset.v; renderSide();
+  }));
+  // ---- job-detail drawer ----
+  const machPool={emb:['M1 · 6-head','M2 · 6-head'],scr:['M1 · 8-color auto','M2 · 6-color auto'],dtf:['M1 · 24″ roll','M2 · 24″ roll']};
+  const opPool={emb:['Marcus D.','Priya S.'],scr:['Luis R.','Tara V.'],dtf:['Nina O.','Sam K.']};
+  const contacts=['Dana Reyes','Chris Alvarez','Morgan Lee','Sofia Nunez','Ray Patel','Jamie Cole','Alex Kim','Robin Tran'];
+  function garmentOf(count){const c=String(count).toLowerCase();
+    if(c.includes('cap'))return['Cap · structured 6-panel','Cotton twill'];
+    if(c.includes('polo'))return['Polo','Piqué knit'];
+    if(c.includes('hood'))return['Hoodie','Fleece'];
+    if(c.includes('jacket'))return['Jacket','Nylon shell'];
+    if(c.includes('scrub'))return['Scrub top','Poly-cotton'];
+    if(c.includes('bean'))return['Beanie','Acrylic knit'];
+    if(c.includes('apron'))return['Apron','Cotton drill'];
+    if(c.includes('duffel')||c.includes('tote')||c.includes('bag'))return['Bag','Canvas'];
+    if(c.includes('sheet'))return['Transfer sheets','DTF film'];
+    return['Tee','Cotton jersey'];}
+  function stitchesOf(count){const c=String(count).toLowerCase();
+    if(c.includes('cap'))return'7,500'; if(c.includes('jacket'))return'12,500';
+    if(c.includes('hood'))return'9,000'; if(c.includes('polo'))return'6,000';
+    if(c.includes('scrub'))return'4,500'; if(c.includes('bean'))return'5,000'; return'5,500';}
+  function placeOf(count){const c=String(count).toLowerCase();
+    if(c.includes('cap')||c.includes('bean'))return'Cap front, center';
+    if(c.includes('jacket'))return'Left chest + full back'; return'Left chest';}
+  function orderDate(base){let lead=8+ordNum(base)%8, d=dueNum(base.due)-lead, mon='Sep'; if(d<1){d+=31;mon='Aug';} return mon+' '+d;}
+  function fmtClock(dayIdx,hoff){return days[dayIdx][0]+' '+hourLabel(hoff);}
+  function trimsOf(base){let h=0;for(const c of base.cust)h=(h*31+c.charCodeAt(0))>>>0;return 4+(h%11);}
+  function defaultFile(meth,cust){const s=cust.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');
+    return s+'.'+(meth==='emb'?'dst':meth==='scr'?'ai':'png');}
+  // dropping a new production file re-reads the method's spec fields from it
+  function specsFromFile(meth,name){let h=0;for(const c of name)h=(h*31+c.charCodeAt(0))>>>0;
+    if(meth==='emb') return {stitches:(6000+(h%90)*100).toLocaleString(),trims:4+(h%12),threads:''+(2+h%6),
+      placement:['Left chest','Cap front, center','Full back','Left chest + sleeve'][h%4]};
+    if(meth==='scr') return {colors:''+(1+h%6),screens:'Burn new',locations:['Front','Front + back','Front + left sleeve'][h%3],ink:'Plastisol',flashes:''+(h%3)};
+    return {gangsheet:'22″ wide',sheets:(50+h%350)+' sheets',presstemp:'305°F · 12 s',coldpeel:(h%2?'Yes':'No')};}
+  const row=(k,v)=>`<div class="drow"><span class="k">${k}</span><span class="v">${v}</span></div>`;
+  const erow=(k,ctrl)=>`<div class="drow"><span class="k">${k}</span>${ctrl}</div>`;
+  const stTxt=s=>({red:'At risk',yel:'Cutting it close',grn:'On track'}[s]);
+
+  const drawer=document.getElementById('drawer'), scrim=document.getElementById('scrim');
+  let dstate={meth:null,di:null,mode:'view'};
+
+  // effective field values: manual overrides on the job take precedence over synthesized defaults
+  function jobFields(meth,di){
+    const base=data[meth][di];
+    if(base.autoHrs==null) base.autoHrs=base.hrs;
+    const j=(computed[meth]||[]).find(x=>x.di===di)||{...base,segs:[],status:'grn',finishDay:null,finishDate:dueNum(base.due)};
+    const lane=base.lane||0, pieces=parseInt(String(base.count))||0, heads=meth==='emb'?6:1;
+    const [garment,fabric]=garmentOf(base.count);
+    const segs=j.segs||[], s0=segs[0], sN=segs[segs.length-1];
+    const runs=s0?`${fmtClock(s0.day,s0.start)} → ${fmtClock(sN.day,sN.start+sN.len)}`:'—';
+    const otHrs=segs.reduce((a,s)=>a+Math.max(0,(s.start+s.len)-Math.max(s.start,8)),0);
+    const finTxt=j.finishDay!=null?`${days[j.finishDay][0]} · Sep ${j.finishDate}`:'—';
+    const slack=dueNum(base.due)-(j.finishDate||dueNum(base.due));
+    const slackTxt=slack<0?`${-slack} day${slack<-1?'s':''} late`:(slack===0?'lands on the due date':`${slack} day${slack>1?'s':''} of slack`);
+    const dsu=Math.max(1,Math.round(base.autoHrs*0.18)), dse=Math.round(base.autoHrs*0.5);
+    const setup=base.setup??dsu, sew=base.sew??dse, labor=base.labor??Math.max(0,base.autoHrs-dsu-dse);
+    return {base,meth,di,lane,pieces,heads,status:j.status,runs:base.runsText||runs,otHrs,finTxt,slackTxt,
+      garment:base.garment??garment, fabric:base.fabric??fabric,
+      po:base.po??('PO-'+(1000+(di*13+meth.charCodeAt(0))%900)),
+      contact:base.contact??contacts[di%contacts.length], orderDate:base.orderDate??orderDate(base),
+      machine:machPool[meth][lane], operator:base.operator??opPool[meth][lane],
+      setup,sew,labor,total:base.hrs,manual:!!base.hrsManual,
+      stitches:base.stitches??stitchesOf(base.count), placement:base.placement??placeOf(base.count), trims:base.trims??trimsOf(base),
+      threads:base.threads??'4',
+      digitizing:base.digitizing??(base.rerun?'On file':'New · 1–2 day lead'),
+      sample:base.sample??(base.rerun?'Not needed (repeat)':'Approved '+orderDate(base)),
+      colors:base.colors??'3', screens:base.screens??(base.rerun?'On file':'Burn new'),
+      locations:base.locations??'Front + left sleeve', ink:base.ink??'Plastisol', flashes:base.flashes??'1',
+      gangsheet:base.gangsheet??'22″ wide', sheets:base.sheets??base.count, presstemp:base.presstemp??'305°F · 12 s', coldpeel:base.coldpeel??'Yes',
+      designFile:base.designFile??defaultFile(meth,base.cust),
+      notes:base.notes??defaultNote(base)};
+  }
+  function defaultNote(b){return `${b.hard?'Firm event date — cannot move. ':''}${b.rerun?'Repeat of last run, art and thread map on file. ':''}Customer approved proof over email. Fold and bag by dozen.`;}
+  // design fields per method: [label, key, type]
+  function designSchema(m){
+    if(m==='emb') return [['Stitch count','stitches','text'],['Placement','placement','text'],['Trims','trims','num'],
+      ['Thread colors','threads','text'],['Digitizing','digitizing','text'],['Sew-out sample','sample','text']];
+    if(m==='scr') return [['Colors','colors','text'],['Screens','screens','text'],['Print locations','locations','text'],
+      ['Ink','ink','text'],['Flashes','flashes','text']];
+    return [['Gang sheet','gangsheet','text'],['Sheets','sheets','text'],['Press temp','presstemp','text'],['Cold peel','coldpeel','text']];
+  }
+
+  function drawerHeader(f){const b=f.base;
+    return `<div class="dh">
+      <div class="dh-top"><span class="methtag ${f.meth}"><span class="md"></span>${mname[f.meth]} · M${f.lane+1}</span>
+        <button class="dx" id="dxclose">×</button></div>
+      <h2>${b.cust}</h2>
+      <div class="dsub">${f.po} · ${b.count}</div>
+      <div class="dh-badges">
+        <span class="lockrow">${b.hard?LOCK_HARD:LOCK_SOFT} Due ${b.due} · ${b.hard?'hard':'soft'}</span>
+        <span class="st ${f.status}">${stTxt(f.status)}</span>
+      </div></div>`;
+  }
+
+  function designRows(f){
+    let h=row('New / repeat',f.base.rerun?'Repeat':'New');
+    designSchema(f.meth).forEach(([label,key])=>h+=row(label,f[key]));
+    h+=row('Design file',f.designFile);
+    return h;
+  }
+  // Design is read from the production file — locked, with a drop zone to load a new file
+  function designEditSection(f){
+    const specs=dstate.newFile?dstate.newFile.specs:null;
+    const gv=key=> specs&&(key in specs)?specs[key]:f[key];
+    let rows=row('New / repeat',f.base.rerun?'Repeat':'New');
+    designSchema(f.meth).forEach(([label,key])=>rows+=row(label,gv(key)));
+    const fn=dstate.newFile?dstate.newFile.name:f.designFile;
+    const dz=dstate.newFile
+      ? `<span class="dz-t"><b>${dstate.newFile.name}</b><span class="dz-s">New file · specs updated below</span></span>`
+      : `<span class="dz-t">Drop a new file, or <u>browse</u><span class="dz-s">Current · ${fn}</span></span>`;
+    return `<p class="lockhint">Specs are read from the production file. Drop a new file to update them.</p>${rows}
+      <label class="dropzone${dstate.newFile?' staged':''}" id="dropzone"><input type="file" id="filein" hidden>${dz}</label>`;
+  }
+
+  function renderView(f){const b=f.base;
+    return drawerHeader(f)+`<div class="dbody">
+      <div class="sec"><h3>Order</h3>${row('Customer',b.cust)}${row('PO number',f.po)}${row('Contact',f.contact)}${row('Order date',f.orderDate)}</div>
+      <div class="sec"><h3>Assignment</h3>${row('Machine',f.machine)}${row('Operator',f.operator)}${row('Method',mname[f.meth])}</div>
+      <div class="sec"><h3>Schedule &amp; timing</h3>${row('Runs',f.runs)}${row('Run time',b.hrs+' h'+(f.otHrs?` <span class="otf">＋${f.otHrs} h OT</span>`:''))}${row('Finishes',f.finTxt+' · '+f.slackTxt)}</div>
+      <div class="sec"><h3>Estimated time</h3>
+        <div class="estrow"><span class="lbl">Setup${b.rerun?' (on file)':''}</span><span>${f.setup} h</span></div>
+        <div class="estrow"><span class="lbl">Machine sew time</span><span>${f.sew} h</span></div>
+        <div class="estrow"><span class="lbl">Per-piece labor</span><span>${f.labor} h</span></div>
+        <div class="estrow total"><span class="lbl">Estimated run time</span><span>${b.hrs} h${f.manual?' *':''}</span></div>
+        ${f.manual?'<div class="estnote">* Time adjusted manually</div>':''}
+        <div class="estmeta"><span><b>${Math.ceil(f.pieces/f.heads)}</b> ${f.meth==='emb'?`cycles · ${f.heads} heads`:'passes'}</span><span><b>${f.pieces}</b> pieces</span></div>
+      </div>
+      <div class="sec"><h3>Design</h3>${designRows(f)}</div>
+      <div class="sec"><h3>Garment</h3>${row('Type',f.garment)}${row('Fabric',f.fabric)}${row('Quantity',b.count)}</div>
+      <div class="sec"><h3>Notes</h3><div class="dnote">${f.notes}</div></div>
+    </div>
+    ${b.done
+      ? `<div class="dfoot col"><div class="donebadge">${CHK} Completed · ${b.doneWhen}</div><button class="btn-s" id="dedit">Edit job</button></div>`
+      : `<div class="dfoot col"><button class="btn-p" id="dedit">Edit job</button><button class="btn-done" id="ddone">Job Completed</button></div>`}`;
+  }
+
+  function renderEdit(f){const b=f.base, m=f.meth, autoHrs=b.autoHrs, sum=f.setup+f.sew+f.labor;
+    return drawerHeader(f)+`<div class="dbody">
+      <div class="sec"><h3>Order</h3>
+        ${erow('Customer',`<input id="e-cust" value="${b.cust}">`)}
+        ${erow('PO number',`<input id="e-po" value="${f.po}">`)}
+        ${erow('Contact',`<input id="e-contact" value="${f.contact}">`)}
+        ${erow('Order date',`<input id="e-order" value="${f.orderDate}">`)}
+        ${erow('Due date',`<input id="e-due" value="${b.due}">`)}
+        ${erow('Firmness',`<select id="e-hard"><option value="soft"${!b.hard?' selected':''}>Soft</option><option value="hard"${b.hard?' selected':''}>Hard</option></select>`)}
+      </div>
+      <div class="sec"><h3>Assignment</h3>
+        ${erow('Machine',`<select id="e-machine"><option value="0"${f.lane===0?' selected':''}>${machPool[m][0]}</option><option value="1"${f.lane===1?' selected':''}>${machPool[m][1]}</option></select>`)}
+        ${erow('Operator',`<input id="e-op" value="${f.operator}">`)}
+        ${erow('Method',`<span class="v">${mname[m]}</span>`)}
+      </div>
+      <div class="sec"><h3>Schedule &amp; timing</h3>
+        ${erow('Runs',`<input id="e-runs" value="${f.runs}">`)}
+        ${erow('Finishes',`<span class="v">${f.finTxt} · ${f.slackTxt}</span>`)}
+      </div>
+      <div class="sec"><h3>Estimated time</h3>
+        ${erow('Setup (h)',`<input type="number" min="0" class="num" id="e-setup" value="${f.setup}">`)}
+        ${erow('Machine sew (h)',`<input type="number" min="0" class="num" id="e-sew" value="${f.sew}">`)}
+        ${erow('Per-piece labor (h)',`<input type="number" min="0" class="num" id="e-labor" value="${f.labor}">`)}
+        <div class="estrow total"><span class="lbl">Estimated run time</span><span id="e-total">${sum} h${sum!==autoHrs?' *':''}</span></div>
+        <div class="estnote" id="e-note"${sum===autoHrs?' hidden':''}>* Time adjusted manually</div>
+      </div>
+      <div class="sec" id="designsec"><h3>Design</h3>${designEditSection(f)}</div>
+      <div class="sec"><h3>Garment</h3>
+        ${erow('Type',`<input id="e-garment" value="${f.garment}">`)}
+        ${erow('Fabric',`<input id="e-fabric" value="${f.fabric}">`)}
+        ${erow('Quantity',`<input id="e-count" value="${b.count}">`)}
+      </div>
+      <div class="sec"><h3>Notes</h3><textarea id="e-notes" class="notesin">${f.notes}</textarea></div>
+    </div>
+    <div class="dfoot"><button class="btn-s" id="dcancel">Cancel</button><button class="btn-p" id="dsave">Save</button></div>`;
+  }
+
+  function renderDrawer(){
+    const f=jobFields(dstate.meth,dstate.di);
+    drawer.innerHTML = dstate.mode==='edit'?renderEdit(f):renderView(f);
+    document.getElementById('dxclose').addEventListener('click',closeDrawer);
+    if(dstate.mode==='view'){
+      document.getElementById('dedit').addEventListener('click',()=>openAddEdit(dstate.meth,dstate.di));
+      const dd=document.getElementById('ddone'); if(dd) dd.addEventListener('click',completeJob);
+    }else{
+      document.getElementById('dcancel').addEventListener('click',()=>{dstate.mode='view';dstate.newFile=null;renderDrawer();});
+      document.getElementById('dsave').addEventListener('click',saveEdit);
+      const autoHrs=data[dstate.meth][dstate.di].autoHrs;
+      const upd=()=>{const s=(+val('e-setup')||0)+(+val('e-sew')||0)+(+val('e-labor')||0);
+        document.getElementById('e-total').textContent=s+' h'+(s!==autoHrs?' *':'');
+        document.getElementById('e-note').hidden=(s===autoHrs);};
+      ['e-setup','e-sew','e-labor'].forEach(id=>document.getElementById(id).addEventListener('input',upd));
+      wireDesign();
+    }
+  }
+  function wireDesign(){
+    const dz=document.getElementById('dropzone'), fi=document.getElementById('filein'); if(!dz)return;
+    fi.addEventListener('change',()=>{ if(fi.files&&fi.files[0]) applyNewFile(fi.files[0].name); });
+    dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('over');});
+    dz.addEventListener('dragleave',()=>dz.classList.remove('over'));
+    dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('over');
+      const f=e.dataTransfer.files&&e.dataTransfer.files[0]; applyNewFile(f?f.name:'new_design.'+(dstate.meth==='emb'?'dst':dstate.meth==='scr'?'ai':'png'));});
+  }
+  function applyNewFile(name){
+    dstate.newFile={name,specs:specsFromFile(dstate.meth,name)};
+    document.getElementById('designsec').innerHTML='<h3>Design</h3>'+designEditSection(jobFields(dstate.meth,dstate.di));
+    wireDesign();
+  }
+  const val=id=>document.getElementById(id).value;
+  function saveEdit(){
+    const b=data[dstate.meth][dstate.di];
+    b.cust=val('e-cust').trim()||b.cust; b.po=val('e-po').trim(); b.contact=val('e-contact').trim();
+    b.orderDate=val('e-order').trim(); b.due=val('e-due').trim()||b.due; b.hard=val('e-hard')==='hard';
+    b.lane=+val('e-machine'); b.operator=val('e-op').trim(); b.runsText=val('e-runs').trim();
+    const su=+val('e-setup')||0, se=+val('e-sew')||0, la=+val('e-labor')||0, total=su+se+la;
+    b.setup=su; b.sew=se; b.labor=la; b.hrs=total; b.hrsManual=(total!==b.autoHrs);
+    if(dstate.newFile){ const s=dstate.newFile.specs; for(const k in s) b[k]=s[k]; b.designFile=dstate.newFile.name; }
+    b.garment=val('e-garment').trim(); b.fabric=val('e-fabric').trim(); b.count=val('e-count').trim()||b.count;
+    b.notes=val('e-notes');
+    dstate.newFile=null; build(); renderSide(); dstate.mode='view'; renderDrawer();
+  }
+  // Mark a job done "now": clip it to the current day/time, lock + grey it, raise the change bar.
+  function fmtNowClock(n){ let h=n.getHours(),m=n.getMinutes(),ap=h<12?'AM':'PM'; h=h%12||12; return h+':'+String(m).padStart(2,'0')+' '+ap; }
+  function nowMark(){
+    const n=new Date(); let di=dayDate.indexOf(n.getDate());
+    if(di<0) di = n.getDate()<dayDate[0]?0:DAYS-1;
+    let pos=n.getHours()+n.getMinutes()/60-9; pos=Math.max(0,Math.min(8,pos));
+    const dd=days[di]; return {day:di,pos,label:`${dd[0]} ${dd[1]} · ${fmtNowClock(n)}`};
+  }
+  function completeJob(){
+    const before = dirty?null:JSON.stringify(data);
+    const b=data[dstate.meth][dstate.di]; const nm=nowMark();
+    b.done=true; b.doneDay=nm.day; b.donePos=nm.pos; b.doneWhen=nm.label;
+    build(); renderSide(); renderDrawer();
+    if(!dirty && before && JSON.stringify(data)!==before){ baseline=before; }
+    dirty=true; changebar.hidden=false;
+  }
+  let drLastFocus=null;
+  function openDrawer(meth,di){ drLastFocus=document.activeElement; dstate={meth,di,mode:'view',newFile:null}; renderDrawer();
+    scrim.classList.add('on'); drawer.classList.add('on'); drawer.setAttribute('aria-hidden','false'); a11yify(drawer); focusFirst(drawer); }
+  function closeDrawer(){ scrim.classList.remove('on'); drawer.classList.remove('on'); drawer.setAttribute('aria-hidden','true'); if(drLastFocus&&drLastFocus.focus)drLastFocus.focus(); }
+  scrim.addEventListener('click',closeDrawer);
+
+  // ---- Add-a-job modal ----
+  const ajover=document.getElementById('ajover');
+  let ajLastFocus=null, ajEditRef=null;
+  function garmentGuess(count){const c=String(count).toLowerCase();
+    if(c.includes('hood'))return'Hoodie'; if(c.includes('cap'))return'Cap / hat';
+    if(c.includes('polo'))return'Polo'; if(c.includes('crew'))return'Crewneck';
+    if(c.includes('jacket'))return'Jacket'; return 'T-shirt';}
+  function ajQty(count){return parseInt(String(count).replace(/\D+/g,''),10)||0;}
+  function ajNoun(count){return String(count).replace(/^[\d,\s]+/,'').trim()||'pieces';}
+  function setTog(tog,idx){ if(!tog)return; [...tog.querySelectorAll('.t')].forEach((t,i)=>t.classList.toggle('on',i===idx)); }
+  function footMode(isEdit){
+    ['ajcancel','ajdraft','ajadd'].forEach(id=>document.getElementById(id).hidden=isEdit);
+    document.getElementById('ajsave').hidden=!isEdit;
+  }
+  // Edit Job: capitalize the first letter of each word in button labels (restore originals in Add mode)
+  function titleCase(s){return s.replace(/\b\w/g,m=>m.toUpperCase());}
+  function caseButtons(isEdit){
+    ajover.querySelectorAll('.foot .btn,.seg .opt,.tog .t,.addloc,.del').forEach(el=>{
+      if(el.dataset.oc==null) el.dataset.oc=el.textContent;
+      el.textContent = isEdit ? titleCase(el.dataset.oc) : el.dataset.oc;
+    });
+  }
+  function keepOneLocation(){ const locs=ajover.querySelectorAll('#aj-locs .loc'); for(let i=locs.length-1;i>0;i--)locs[i].remove(); }
+  function dueTypeTog(){ return ajover.querySelector('.sec .row .tog:not(.aj-design):not(.aj-dig):not(.aj-sample)'); }
+  function fillForm(v){
+    $aj('aj-cust').value=v.cust; $aj('aj-po').value=v.po; $aj('aj-due').value=v.due;
+    $aj('aj-qty').value=v.qty; $aj('aj-op').value=v.op;
+    const nb=ajover.querySelector('.notesbox'); if(nb)nb.value=v.notes||'';
+    AJ.add=v.add||0; $aj('aj-atval').value=(v.add||0).toFixed(1);
+    const mi={emb:0,scr:1,dtf:2}[v.method]; [...ajover.querySelectorAll('.seg .opt')].forEach((o,i)=>o.classList.toggle('on',i===mi));
+    setTog(dueTypeTog(), v.hard?0:1);
+    keepOneLocation();
+    setTog(ajover.querySelector('#aj-locs .aj-design'), v.rerun?1:0);
+    ajover.querySelectorAll('#aj-locs .loc .aj-dig,#aj-locs .loc .aj-sample').forEach(el=>el.classList.toggle('disabled',!!v.rerun));
+    ajFillGarments(); $aj('aj-garment').value=v.garment; ajFillFabrics(); if(v.fabric)$aj('aj-fabric').value=v.fabric;
+    $aj('aj-machine').value = v.lane===1?'M2 - 6-Head':'M1 - 6-Head';
+    ajEst();
+  }
+  const openAdd=()=>{ ajEditRef=null;
+    document.getElementById('ajtitle').textContent='Add a job';
+    ajover.querySelector('.crumb').textContent='New job · unsaved'; footMode(false);
+    fillForm({cust:'',po:'1043',due:'',hard:true,method:'emb',rerun:false,garment:'Hoodie',qty:48,lane:0,op:'',notes:'',add:0});
+    caseButtons(false);
+    ajLastFocus=document.activeElement; ajover.hidden=false; a11yify(ajover); focusFirst(ajover); };
+  function openAddEdit(meth,di){
+    const b=data[meth][di], f=jobFields(meth,di);
+    ajEditRef={meth,di};
+    document.getElementById('ajtitle').textContent='Edit Job';
+    ajover.querySelector('.crumb').textContent=b.cust; footMode(true);
+    fillForm({cust:b.cust,po:f.po,due:b.due,hard:!!b.hard,method:meth,rerun:!!b.rerun,
+      garment:garmentGuess(b.count),qty:ajQty(b.count),lane:b.lane||0,op:f.operator,notes:b.notes||'',add:0});
+    caseButtons(true);
+    ajLastFocus=document.activeElement; ajover.hidden=false; a11yify(ajover); focusFirst(ajover);
+  }
+  function saveJobEdit(){
+    if(!ajEditRef)return; const {meth,di}=ajEditRef, b=data[meth][di];
+    const before = dirty?null:JSON.stringify(data);
+    b.cust=$aj('aj-cust').value.trim()||b.cust; b.po=$aj('aj-po').value.trim();
+    b.due=$aj('aj-due').value.trim()||b.due;
+    b.hard = dueTypeTog().querySelector('.t.on').textContent.indexOf('Hard')===0;
+    b.rerun = !ajAnyNew();
+    b.garment=$aj('aj-garment').value; b.fabric=$aj('aj-fabric').value;
+    const qty=parseInt($aj('aj-qty').value,10)||ajQty(b.count); b.count=qty+' '+ajNoun(b.count);
+    b.lane=$aj('aj-machine').value.indexOf('M2')===0?1:0;
+    b.operator=$aj('aj-op').value.trim();
+    const nb=ajover.querySelector('.notesbox'); if(nb)b.notes=nb.value;
+    b.hrs=Math.max(1,Math.round(AJ.total)); b.autoHrs=b.hrs; b.hrsManual=false; delete b.setup; delete b.sew; delete b.labor;
+    ajEditRef=null; closeAdd(); build(); renderSide();
+    if(!dirty && before && JSON.stringify(data)!==before){ baseline=before; dirty=true; changebar.hidden=false; }
+    else if(dirty){ changebar.hidden=false; }
+    if(drawer.classList.contains('on')){ dstate={meth,di,mode:'view',newFile:null}; renderDrawer(); }
+  }
+  const closeAdd=()=>{ ajover.hidden=true; if(ajLastFocus&&ajLastFocus.focus)ajLastFocus.focus(); };
+  document.getElementById('addbtn').addEventListener('click',openAdd);
+  document.getElementById('ajx').addEventListener('click',closeAdd);
+  document.getElementById('ajcancel').addEventListener('click',closeAdd);
+  document.getElementById('ajdraft').addEventListener('click',closeAdd);
+  document.getElementById('ajadd').addEventListener('click',closeAdd);
+  document.getElementById('ajsave').addEventListener('click',saveJobEdit);
+  ajover.addEventListener('click',e=>{ if(e.target===ajover) closeAdd(); });   // click backdrop
+  // segmented / toggle controls behave like single-select chips (delegated so added locations work too)
+  ajover.addEventListener('click',e=>{
+    const opt=e.target.closest('.seg .opt');
+    if(opt){ const seg=opt.closest('.seg'); seg.querySelectorAll('.opt').forEach(x=>x.classList.remove('on')); opt.classList.add('on'); }
+    const t=e.target.closest('.tog .t');
+    if(t){
+      const tog=t.closest('.tog');
+      if(!tog.classList.contains('disabled')){
+        tog.querySelectorAll('.t').forEach(x=>x.classList.remove('on')); t.classList.add('on');
+        // per-location Design toggle: Rerun File disables digitizing + sample in that location
+        if(tog.classList.contains('aj-design')){
+          const loc=tog.closest('.loc'), rerun=t.dataset.v==='rerun';
+          loc.querySelectorAll('.aj-dig,.aj-sample').forEach(el=>el.classList.toggle('disabled',rerun));
+          if(typeof ajEst==='function') ajEst();
+        }
+      }
+    }
+  });
+
+  // ---- Add-a-job: garments, fabrics, live estimate ----
+  const AJG={
+    'Hoodie':    {fabrics:['Fleece','Cotton blend','French terry']},
+    'T-shirt':   {fabrics:['100% cotton','Tri-blend','Performance poly']},
+    'Polo':      {fabrics:['Piqué cotton','Performance poly']},
+    'Cap / hat': {fabrics:['Structured twill','Foam trucker','Cotton dad']},
+    'Crewneck':  {fabrics:['Fleece','Cotton blend']},
+    'Jacket':    {fabrics:['Softshell','Nylon','Canvas']}
+  };
+  const AJ={add:0.0};
+  const $aj=id=>document.getElementById(id);
+  // a new design (in any location) needs digitizing + approval setup; all reruns = short setup
+  function ajAnyNew(){ return [...document.querySelectorAll('#aj-locs .aj-design .t.on')].some(t=>t.dataset.v==='new'); }
+  // deterministic pseudo-random 0.50–1.00 per garment+fabric so the mock changes but stays stable
+  function ajDelta(str){ let h=0; for(let i=0;i<str.length;i++) h=(h*31+str.charCodeAt(i))>>>0; return 0.5+(h%51)/100; }
+  function ajFillGarments(){
+    const gs=$aj('aj-garment'); gs.innerHTML=Object.keys(AJG).map(g=>`<option>${g}</option>`).join(''); gs.value='Hoodie'; ajFillFabrics(); }
+  function ajFillFabrics(){
+    const g=$aj('aj-garment').value, fs=$aj('aj-fabric'); fs.innerHTML=AJG[g].fabrics.map(f=>`<option>${f}</option>`).join(''); }
+  function ajEst(){
+    const g=$aj('aj-garment').value, f=$aj('aj-fabric').value;
+    const qty=parseInt($aj('aj-qty').value,10)||0;
+    const mach=2.0+ajDelta(g+'|'+f+'|m');
+    const labor=2.4+ajDelta(g+'|'+f+'|l');
+    const isNew=ajAnyNew();
+    const setup=isNew?0.75:0.25;
+    const total=setup+mach+labor+AJ.add; AJ.total=total;
+    $aj('aj-machrun').textContent=mach.toFixed(1)+' hrs';
+    $aj('aj-labor').textContent=labor.toFixed(1)+' hrs';
+    $aj('aj-setuplab').textContent=isNew?'Setup (new design)':'Setup (rerun)';
+    $aj('aj-setup').textContent=isNew?'45 min':'15 min';
+    $aj('aj-big').textContent='~'+total.toFixed(1)+' hrs';
+    $aj('aj-biglab').textContent='Production time · '+qty+' pieces';
+    $aj('aj-cycles').textContent=Math.ceil(qty/6)+' cycles';
+    $aj('aj-cyclab').textContent='ceil('+qty+' ÷ 6 heads)';
+  }
+  $aj('aj-garment').addEventListener('change',()=>{ ajFillFabrics(); ajEst(); });
+  $aj('aj-fabric').addEventListener('change',ajEst);
+  $aj('aj-qty').addEventListener('input',ajEst);
+  // Additional-time stepper (±0.1 hr or typed)
+  function ajSetAdd(v){ v=Math.max(0,Math.round(v*10)/10); AJ.add=v; $aj('aj-atval').value=v.toFixed(1); ajEst(); }
+  $aj('aj-atminus').addEventListener('click',()=>ajSetAdd(AJ.add-0.1));
+  $aj('aj-atplus').addEventListener('click',()=>ajSetAdd(AJ.add+0.1));
+  $aj('aj-atval').addEventListener('change',()=>ajSetAdd(parseFloat($aj('aj-atval').value)));
+  // Add / remove location
+  function ajRenumber(){ document.querySelectorAll('#aj-locs .loc .lh span:first-child').forEach((s,i)=>s.textContent='LOCATION '+(i+1)); }
+  $aj('aj-addloc').addEventListener('click',()=>{
+    const wrap=$aj('aj-locs'), d=document.createElement('div'); d.className='loc';
+    d.innerHTML=`<div class="lh"><span>LOCATION ${wrap.children.length+1}</span><span class="del">Remove</span></div>
+      <div class="row">
+        <div class="fld"><label>Design</label><div class="tog aj-design"><div class="t on" data-v="new">New design</div><div class="t" data-v="rerun">Rerun File</div></div></div>
+        <div class="fld"><label>Production file</label><div class="in sel"><span>Upload / attach file</span><span class="chev up"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></span></div></div>
+      </div>
+      <div class="row">
+        <div class="fld s"><label>Digitizing needed?</label><div class="tog aj-dig"><div class="t on">Yes</div><div class="t">No</div></div></div>
+        <div class="fld s"><label>Sample / approval?</label><div class="tog aj-sample"><div class="t on">Yes</div><div class="t">No</div></div></div>
+      </div>
+      <div class="row">
+        <div class="fld"><label>Placement</label><input class="in filled" value="" placeholder="e.g. Full back"></div>
+        <div class="fld s"><label>Stitch count</label><div class="in filled">—</div></div>
+        <div class="fld s"><label>Trims</label><div class="in filled">—</div></div>
+        <div class="fld s"><label>Thread changes</label><div class="in filled">—</div></div>
+      </div>
+      <div class="hint">Stitch count, trims, and thread changes auto-fill from the design file. Rough until digitized.</div>`;
+    wrap.appendChild(d); ajRenumber(); if(ajEditRef)caseButtons(true);
+  });
+  $aj('aj-locs').addEventListener('click',e=>{
+    if(!e.target.classList.contains('del'))return;
+    const locs=document.querySelectorAll('#aj-locs .loc'); if(locs.length<=1)return;
+    e.target.closest('.loc').remove(); ajRenumber();
+  });
+  ajFillGarments(); ajEst();
+
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeDrawer(); closeAdd(); } });
+
+  // ================= Accessibility layer (audit corrections) =================
+  const FOCUSABLE='a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+  // Make custom div/span controls keyboard-focusable with a button role.
+  function a11yify(root=document){
+    root.querySelectorAll('.tab,.mtog,.dv,.ltog,.x,.dx,.lk,.addloc,.seg .opt,.tog .t,.del,.dropzone').forEach(el=>{
+      if(['BUTTON','SELECT','INPUT','TEXTAREA','A','LABEL'].includes(el.tagName))return;
+      if(!el.hasAttribute('tabindex'))el.tabIndex=0;
+      if(!el.getAttribute('role'))el.setAttribute('role','button');
+    });
+    // reflect on/off state for toggle-style controls (state was color/weight only)
+    root.querySelectorAll('.tab,.mtog,.dv,.ltog,.seg .opt,.tog .t').forEach(el=>{
+      el.setAttribute('aria-pressed', el.classList.contains('on') ? 'true' : 'false');
+    });
+    labelIcons(root); associateLabels(root); markScrollRegions();
+  }
+  function labelIcons(root){
+    root.querySelectorAll('.x,.dx').forEach(el=>el.setAttribute('aria-label','Close'));
+    root.querySelectorAll('.lk').forEach(el=>{ if(el.title)el.setAttribute('aria-label',el.title); });
+    root.querySelectorAll('.dchk').forEach(el=>el.setAttribute('aria-label','Completed'));
+  }
+  // Associate each control with its visible field label (no visual change).
+  function associateLabels(root){
+    root.querySelectorAll('.fld,.drow,.estrow').forEach(fld=>{
+      const lab=fld.querySelector('label'); const ctl=fld.querySelector('input,select,textarea');
+      if(lab&&ctl&&!ctl.getAttribute('aria-label')&&!ctl.getAttribute('aria-labelledby')){
+        ctl.setAttribute('aria-label',lab.textContent.replace(/\*/g,'').trim());
+      }
+    });
+    // placement inputs inside a location block carry their own label already handled above
+    const notes=document.querySelector('.ajover .notesbox'); if(notes&&!notes.getAttribute('aria-label'))notes.setAttribute('aria-label','Notes for the team');
+    const nin=document.querySelector('.notesin'); if(nin&&!nin.getAttribute('aria-label'))nin.setAttribute('aria-label','Notes');
+  }
+  function markScrollRegions(){
+    [document.getElementById('raillist'),document.querySelector('#drawer .dbody')].forEach(el=>{
+      if(el&&!el.hasAttribute('tabindex')){ el.tabIndex=0; el.setAttribute('role','group'); el.setAttribute('aria-label','Scrollable list'); }
+    });
+  }
+  function focusFirst(container){
+    const f=container.querySelector(FOCUSABLE); if(f)f.focus();
+  }
+  function trapFocus(container,e){
+    if(e.key!=='Tab')return;
+    const f=[...container.querySelectorAll(FOCUSABLE)].filter(el=>el.offsetParent!==null);
+    if(!f.length)return; const first=f[0],last=f[f.length-1];
+    if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+    else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+  }
+  // Enter / Space activate role=button controls (native buttons already handle this).
+  document.addEventListener('keydown',e=>{
+    const t=e.target;
+    if((e.key==='Enter'||e.key===' ')&&t.matches&&t.matches('[role="button"],[role="tab"]')){ e.preventDefault(); t.click(); }
+  });
+  ajover.addEventListener('keydown',e=>{ if(!ajover.hidden)trapFocus(ajover,e); });
+  drawer.addEventListener('keydown',e=>{ if(drawer.classList.contains('on'))trapFocus(drawer,e); });
+  // Re-apply a11y attributes whenever the board / rail / drawer / modal re-render.
+  const a11yObs=new MutationObserver(()=>{ clearTimeout(a11yObs._t); a11yObs._t=setTimeout(()=>a11yify(document),0); });
+  [g,document.getElementById('rail'),drawer,ajover].forEach(n=>n&&a11yObs.observe(n,{childList:true,subtree:true}));
+
+  updateLaneLabel(); build(); renderSide(); a11yify(document);
+</script>
+</body>
+</html>

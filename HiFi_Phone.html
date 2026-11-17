@@ -789,7 +789,7 @@ function ajFillFabrics(){const g=$('aj-garment').value;$('aj-fabric').innerHTML=
 function ajAnyNew(){return [...$('ovAdd').querySelectorAll('#aj-locs .aj-design .t.on')].some(t=>t.dataset.v==='new');}
 function ajEst(){
   const g=$('aj-garment').value,f=$('aj-fabric').value,qty=parseInt($('aj-qty').value,10)||0;
-  const mach=2.0+ajDelta(g+'|'+f+'|m'),labor=2.4+ajDelta(g+'|'+f+'|l'),isNew=ajAnyNew(),setup=isNew?0.75:0.25;
+  const mach=Math.ceil(qty/6)*(0.28+ajDelta(g+'|'+f+'|m')*0.13),labor=qty*(0.05+ajDelta(g+'|'+f+'|l')*0.027),isNew=ajAnyNew(),setup=isNew?0.75:0.25;
   const total=setup+mach+labor+AJ.add; AJ.total=total;
   $('aj-mach').textContent=mach.toFixed(1)+' hrs';$('aj-labor').textContent=labor.toFixed(1)+' hrs';
   $('aj-setuplab').textContent=isNew?'Setup (new design)':'Setup (rerun)';$('aj-setup').textContent=isNew?'45 min':'15 min';

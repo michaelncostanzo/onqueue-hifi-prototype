@@ -666,8 +666,8 @@
             <div class="bt"><span>Per-piece labor</span><span class="v" id="aj-labor">3.2 hrs</span></div>
           </div>
           <div class="fit"><span id="aj-cycles">8 cycles</span><span id="aj-cyclab">ceil(48 ÷ 6 heads)</span></div>
-          <div class="fit"><span>Turnaround</span><b>~6 business days</b></div>
-          <div class="fit"><span>Earliest fit</span><b>Tue, Sep 15</b></div>
+          <div class="fit"><span>Turnaround</span><b id="aj-turn">~6 business days</b></div>
+          <div class="fit"><span>Earliest fit</span><b id="aj-fit">Tue, Sep 15</b></div>
           <div class="addtime">
             <span class="atlabel">Additional time</span>
             <div class="stepper">
@@ -1551,8 +1551,8 @@
   function ajEst(){
     const g=$aj('aj-garment').value, f=$aj('aj-fabric').value;
     const qty=parseInt($aj('aj-qty').value,10)||0;
-    const mach=2.0+ajDelta(g+'|'+f+'|m');
-    const labor=2.4+ajDelta(g+'|'+f+'|l');
+    const mach=Math.ceil(qty/6)*(0.28+ajDelta(g+'|'+f+'|m')*0.13);
+    const labor=qty*(0.05+ajDelta(g+'|'+f+'|l')*0.027);
     const isNew=ajAnyNew();
     const setup=isNew?0.75:0.25;
     const total=setup+mach+labor+AJ.add; AJ.total=total;
@@ -1564,6 +1564,12 @@
     $aj('aj-biglab').textContent='Production time · '+qty+' pieces';
     $aj('aj-cycles').textContent=Math.ceil(qty/6)+' cycles';
     $aj('aj-cyclab').textContent='ceil('+qty+' ÷ 6 heads)';
+    // turnaround + earliest fit recompute with the estimate (prototype: estimate card only)
+    var __bd=Math.max(2, Math.round(total + qty/90 + (isNew?0.6:0)));
+    var __fits=[['Mon','Sep 8'],['Tue','Sep 9'],['Wed','Sep 10'],['Thu','Sep 11'],['Fri','Sep 12'],['Mon','Sep 15'],['Tue','Sep 16'],['Wed','Sep 17'],['Thu','Sep 18'],['Fri','Sep 19'],['Mon','Sep 22'],['Tue','Sep 23'],['Wed','Sep 24'],['Thu','Sep 25'],['Fri','Sep 26'],['Mon','Sep 29'],['Tue','Sep 30']];
+    var __f=__fits[Math.min(__bd, __fits.length-1)];
+    var __t=$aj('aj-turn'); if(__t)__t.textContent='~'+__bd+' business days';
+    var __ff=$aj('aj-fit'); if(__ff)__ff.textContent=__f[0]+', '+__f[1];
   }
   $aj('aj-garment').addEventListener('change',()=>{ ajFillFabrics(); ajEst(); });
   $aj('aj-fabric').addEventListener('change',ajEst);
